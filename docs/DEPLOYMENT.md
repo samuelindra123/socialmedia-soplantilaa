@@ -15,7 +15,7 @@ Minimal bisa jalan di **1 VM** (backend + frontend + reverse proxy) atau dipisah
 
 ---
 
-## 2. Backend – NestJS (folder `backend/`)
+## 2. Backend – NestJS (folder `apps/backend/`)
 
 ### 2.1. Prasyarat
 
@@ -25,7 +25,7 @@ Minimal bisa jalan di **1 VM** (backend + frontend + reverse proxy) atau dipisah
 
 ### 2.2. Environment Variables Production
 
-Buat file `.env` di folder `backend/` (atau `.env.production` jika memakai proses build khusus), dengan nilai **production** (jangan pakai kredensial dev). Contoh struktur:
+Buat file `.env` di folder `apps/backend/` (atau `.env.production` jika memakai proses build khusus), dengan nilai **production** (jangan pakai kredensial dev). Contoh struktur:
 
 ```env
 # Database
@@ -63,7 +63,7 @@ PORT=4000
 
 ### 2.3. Build & Migrate
 
-Di server, dari folder `backend/`:
+Di server, dari folder `apps/backend/`:
 
 ```bash
 # Install dependencies
@@ -101,7 +101,7 @@ Jika memakai Docker, prinsipnya sama: pastikan image menjalankan `npm run build`
 
 ---
 
-## 3. Frontend – Next.js (folder `frontend/`)
+## 3. Frontend – Next.js (folder `apps/frontend/`)
 
 ### 3.1. Prasyarat
 
@@ -110,7 +110,7 @@ Jika memakai Docker, prinsipnya sama: pastikan image menjalankan `npm run build`
 
 ### 3.2. Environment Variables Production
 
-Buat `.env.production` atau `.env` di folder `frontend/` (diatur sesuai platform deployment):
+Buat `.env.production` atau `.env` di folder `apps/frontend/` (diatur sesuai platform deployment):
 
 ```env
 NEXT_PUBLIC_API_URL="https://api.renunganku.com"
@@ -122,7 +122,7 @@ NODE_ENV=production
 
 ### 3.3. Build & Run Next.js
 
-Di server, dari folder `frontend/`:
+Di server, dari folder `apps/frontend/`:
 
 ```bash
 # Install dependencies

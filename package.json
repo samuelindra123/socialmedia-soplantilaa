@@ -2,11 +2,17 @@
   "name": "project-root",
   "private": true,
   "version": "1.0.0",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "postinstall": "npm install --prefix backend",
+    "postinstall": "npm install --prefix apps/backend",
+    "dev:backend": "npm run start:dev --prefix apps/backend",
+    "dev:frontend": "npm run dev --prefix apps/frontend",
     "build": "npm run build:backend",
-    "build:backend": "npm run build --prefix backend && npm run prune:backend",
-    "prune:backend": "npm prune --omit=dev --prefix backend",
-    "start": "npm run start:prod --prefix backend"
+    "build:backend": "npm run build --prefix apps/backend && npm run prune:backend",
+    "build:frontend": "npm run build --prefix apps/frontend",
+    "prune:backend": "npm prune --omit=dev --prefix apps/backend",
+    "start": "npm run start:prod --prefix apps/backend"
   }
 }

@@ -42,8 +42,10 @@ Repositori ini berisi:
 ## Struktur Proyek
 
 ```text
-backend/   # NestJS API (src/, prisma/, test/)
-frontend/  # Next.js App Router frontend (src/app, components, store, dll)
+apps/
+  backend/   # NestJS API (src/, prisma/, test/)
+  frontend/  # Next.js App Router frontend (src/app, components, store, dll)
+             # route groups: (marketing), (auth), (social)
 docs/      # Dokumentasi arsitektur & deployment
 admin/     # Backend/admin terpisah (mis. Rust admin panel)
 ```
@@ -55,10 +57,11 @@ admin/     # Backend/admin terpisah (mis. Rust admin panel)
 ### 1. Backend (NestJS)
 
 ```bash
-cd backend
+cd apps/backend
 npm install
 
-# Pastikan DATABASE_URL di backend/.env menunjuk ke DB dev
+# Pastikan DATABASE_URL di apps/backend/.env menunjuk ke DB dev
+# NEXT_SERVER_ACTION_API_TOKEN harus diisi dan sama dengan apps/frontend/.env.local
 npx prisma migrate deploy   # atau prisma db push untuk dev
 
 npm run start:dev
@@ -68,15 +71,55 @@ npm run start:dev
 ### 2. Frontend (Next.js)
 
 ```bash
-cd frontend
+cd apps/frontend
 npm install
 
-# Pastikan NEXT_PUBLIC_API_URL di frontend/.env.local:
+# Siapkan env frontend (lihat apps/frontend/.env.local.example)
 # NEXT_PUBLIC_API_URL=http://localhost:4000
+# BACKEND_API_URL=http://localhost:4000
+# NEXT_SERVER_ACTION_API_TOKEN=<token-random-panjang>
+# (harus sama dengan apps/backend/.env -> NEXT_SERVER_ACTION_API_TOKEN)
 
 npm run dev
 # Frontend jalan di http://localhost:3000
 ```
+
+### 3. Konfigurasi Google OAuth (Frontend + Backend)
+
+Isi env backend berikut:
+
+```dotenv
+GOOGLE_CLIENT_ID="<google-client-id>"
+GOOGLE_CLIENT_SECRET="<google-client-secret>"
+GOOGLE_OAUTH_REDIRECT="http://localhost:4000/auth/google/callback"
+GOOGLE_OAUTH_STATE_SECRET="<random-secret-panjang>"
+```
+
+Di Google Cloud Console (OAuth 2.0 Client ID), isi:
+
+- Authorized JavaScript origins (local):
+  - `http://localhost:3000`
+- Authorized redirect URIs (local):
+  - `http://localhost:4000/auth/google/callback`
+
+Untuk production, tambahkan domain production Anda:
+
+- Authorized JavaScript origins (production):
+  - `https://renunganku.peakcenter.tech` (atau domain frontend production Anda)
+- Authorized redirect URIs (production):
+  - `https://api.domain-anda.com/auth/google/callback` (harus persis sama dengan `GOOGLE_OAUTH_REDIRECT`)
+
+Catatan penting:
+
+- `GOOGLE_OAUTH_REDIRECT` wajib persis sama dengan salah satu nilai di Authorized redirect URIs.
+- `GOOGLE_OAUTH_STATE_SECRET` dipakai untuk menandatangani parameter state OAuth agar tidak bisa ditamper.
+
+Catatan keamanan frontend:
+
+- Alur auth utama (login, signup, verify, forgot password, oauth confirm) sudah dipindahkan ke Server Action.
+- Request HTTP dari client axios sekarang lewat route server internal (`/api/proxy/*`) sebelum diteruskan ke backend.
+- Backend sekarang mewajibkan header internal token (`x-internal-api-token`) untuk request HTTP API, sehingga panggilan langsung dari browser ke backend akan ditolak.
+- Koneksi socket realtime kini bisa menggunakan cookie auth HttpOnly (fallback), sehingga tidak lagi wajib membaca token akses dari localStorage.
 
 ---
 
