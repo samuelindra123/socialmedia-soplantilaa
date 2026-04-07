@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Wrench, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Wrench, AlertTriangle, ExternalLink } from 'lucide-react';
 
 const STORAGE_KEY = 'soplantila_maintenance_dismissed_v1';
 
 export default function MaintenanceBanner() {
   const [showPopup, setShowPopup] = useState(false);
-  const [showBanner, setShowBanner] = useState(true);
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem(STORAGE_KEY);
@@ -23,27 +22,16 @@ export default function MaintenanceBanner() {
 
   return (
     <>
-      {/* Top Banner */}
-      {showBanner && (
-        <div className="relative z-50 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white">
-          <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm font-medium flex-1 min-w-0">
-              <Wrench className="w-4 h-4 shrink-0 animate-pulse" />
-              <span className="truncate">
-                🚧 Soplantila sedang dalam tahap pengembangan aktif oleh tim{' '}
-                <strong>samuelindrabastian</strong> — beberapa fitur mungkin belum tersedia.
-              </span>
-            </div>
-            <button
-              onClick={() => setShowBanner(false)}
-              className="shrink-0 p-1 rounded-full hover:bg-white/20 transition-colors"
-              aria-label="Tutup banner"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+      {/* Top Banner - permanent, cannot be closed */}
+      <div className="relative z-50 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white">
+        <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-2">
+          <Wrench className="w-4 h-4 shrink-0 animate-pulse" />
+          <span className="text-sm font-medium text-center">
+            🚧 Soplantila sedang dalam tahap pengembangan aktif oleh tim{' '}
+            <strong>samuelindrabastian</strong> — beberapa fitur mungkin belum tersedia.
+          </span>
         </div>
-      )}
+      </div>
 
       {/* First-visit Popup */}
       {showPopup && (
