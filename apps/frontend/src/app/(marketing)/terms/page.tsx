@@ -6,7 +6,11 @@ import Footer from '@/components/Footer';
 const displayFont = Space_Grotesk({ subsets: ['latin'], variable: '--font-marketing-display', weight: ['500', '700'] });
 const bodyFont = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-marketing-body', weight: ['400', '500'] });
 
-export const metadata: Metadata = { title: 'Ketentuan Layanan | Soplantila', description: 'Ketentuan layanan Soplantila — aturan main yang fair dan jelas.' };
+export const metadata: Metadata = { 
+  title: 'Ketentuan Layanan | Soplantila', 
+  description: 'Ketentuan layanan Soplantila — aturan main yang fair dan jelas.',
+  alternates: { canonical: 'https://www.soplantila.my.id/terms' },
+};
 
 export default function TermsPage() {
   return (

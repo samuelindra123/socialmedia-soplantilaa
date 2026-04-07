@@ -28,6 +28,7 @@ const bodyFont = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'Soplantila - Platform Sosial Media untuk Berbagi & Terhubung',
   description: 'Soplantila adalah platform sosial media Indonesia untuk berbagi postingan, mengikuti teman, dan membangun komunitas. Daftar gratis dengan email atau akun Google.',
+  alternates: { canonical: 'https://www.soplantila.my.id' },
   openGraph: {
     title: 'Soplantila - Platform Sosial Media Indonesia',
     description: 'Berbagi konten, terhubung dengan teman, dan bangun komunitas di Soplantila. Login mudah dengan akun Google.',
