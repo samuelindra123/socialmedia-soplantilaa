@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, Clock, RefreshCw, Wifi, Database, Server, Globe, Activity } from 'lucide-react';
 import Link from 'next/link';
 
+// Public page - no auth required
+export const dynamic = 'force-dynamic';
+
 type Status = 'checking' | 'up' | 'down' | 'degraded';
 
 interface ServiceStatus {

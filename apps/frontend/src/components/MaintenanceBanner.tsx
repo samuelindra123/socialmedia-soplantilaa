@@ -54,13 +54,13 @@ function MaintenanceUI({ showPopup }: { showPopup: boolean }) {
             {' — '}Server sedang dalam perbaikan oleh tim{' '}
             <span className="font-bold underline underline-offset-2">samuelindrabastian</span>.
             {' '}Login & fitur sosial <span className="font-bold">tidak dapat diakses</span>.{' '}
-            <a href="/status" className="underline font-bold hover:opacity-80">Cek Status →</a>
+            <a href="/status" className="underline font-bold hover:opacity-80 cursor-pointer">Cek Status →</a>
           </p>
         </div>
       </div>
 
-      {/* Spacer — mendorong seluruh konten (termasuk header fixed) ke bawah */}
-      <div className="h-9 sm:h-10 relative z-[61]" />
+      {/* Spacer — pointer-events-none agar tidak block klik banner */}
+      <div className="h-9 sm:h-10 pointer-events-none" />
 
       {/* Popup */}
       {popupVisible && (
