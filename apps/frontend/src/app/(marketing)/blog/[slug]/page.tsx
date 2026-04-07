@@ -10,6 +10,21 @@ import {
   INTERNAL_API_TOKEN_HEADER,
 } from "@/lib/server/internal-api-token";
 
+function buildInternalHeaders(): HeadersInit {
+  try {
+    const token = getInternalApiToken();
+    if (!token) {
+      return {};
+    }
+
+    return {
+      [INTERNAL_API_TOKEN_HEADER]: token,
+    };
+  } catch {
+    return {};
+  }
+}
+
 function mapCategoryLabel(category: BlogPost["category"]): string {
   switch (category) {
     case "ProductAndVision":
@@ -54,26 +69,28 @@ function formatPublishedAt(publishedAt: string | null): string {
 }
 
 async function fetchBlogPost(slug: string): Promise<BlogPost | null> {
-  const res = await fetch(
-    buildBackendUrl(`/blog/${encodeURIComponent(slug)}`),
-    {
-      headers: {
-        [INTERNAL_API_TOKEN_HEADER]: getInternalApiToken(),
+  try {
+    const res = await fetch(
+      buildBackendUrl(`/blog/${encodeURIComponent(slug)}`),
+      {
+        headers: buildInternalHeaders(),
+        cache: "no-store",
       },
-    cache: "no-store",
-    },
-  );
+    );
 
-  if (res.status === 404) {
+    if (res.status === 404) {
+      return null;
+    }
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const data = (await res.json()) as BlogPost;
+    return data ?? null;
+  } catch {
     return null;
   }
-
-  if (!res.ok) {
-    throw new Error("Gagal memuat blog post");
-  }
-
-  const data = (await res.json()) as BlogPost;
-  return data ?? null;
 }
 
 interface BlogDetailPageProps {
@@ -87,7 +104,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
     return (
       <>
         <Header />
-        <main className="min-h-screen bg-[#FDFDFD] pt-32 pb-24 selection:bg-black selection:text-white font-sans relative">
+        <main className="min-h-screen bg-[#FDFDFD] pt-32 pb-24 selection:bg-slate-900 selection:text-white font-sans relative">
           <div className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(to_right,#e5e5e5_1px,transparent_1px),linear-gradient(to_bottom,#e5e5e5_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-40 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
 
           <div className="max-w-3xl mx-auto px-6 relative z-10">
@@ -119,7 +136,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-[#FDFDFD] pt-32 pb-24 selection:bg-black selection:text-white font-sans relative">
+      <main className="min-h-screen bg-[#FDFDFD] pt-32 pb-24 selection:bg-slate-900 selection:text-white font-sans relative">
         <div className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(to_right,#e5e5e5_1px,transparent_1px),linear-gradient(to_bottom,#e5e5e5_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-40 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
 
         <div className="max-w-5xl mx-auto px-6 mb-12 relative z-10">

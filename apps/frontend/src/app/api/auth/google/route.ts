@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       method: "GET",
       redirect: "manual",
       headers: {
-        "user-agent": request.headers.get("user-agent") || "renunganku-web",
+        "user-agent": request.headers.get("user-agent") || "soplantila-web",
         [INTERNAL_API_TOKEN_HEADER]: internalToken,
       },
       cache: "no-store",

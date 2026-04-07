@@ -11,18 +11,14 @@ import {
   ArrowRight, 
   Loader2, 
   ShieldCheck, 
-  Mail, 
-  Lock, 
   Eye,
   EyeOff,
   AlertCircle
 } from "lucide-react";
-import Logo from "@/components/Logo";
 import { useAuthStore } from "@/store/auth"; 
 import GoogleLogo from "@/components/auth/GoogleLogo";
 import { loginAction } from "@/app/actions/auth-actions";
 
-// Validation Schema
 const loginSchema = z.object({
   email: z.string().email("Format email tidak valid"),
   password: z.string().min(1, "Password wajib diisi"),
@@ -70,8 +66,8 @@ export default function LoginPage() {
 
          useAuthStore.setState({
             user: result.user,
-            token: null,
-            sessionToken: null,
+            token: result.accessToken,
+            sessionToken: result.sessionToken,
             isAuthenticated: true,
             isLoading: false,
          });
@@ -100,138 +96,176 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full grid lg:grid-cols-2 bg-white dark:bg-slate-900 font-sans selection:bg-slate-900 selection:text-white dark:selection:bg-white dark:selection:text-slate-900">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4 font-sans selection:bg-slate-200">
       
-      {/* --- LEFT SIDE --- */}
-      <div className="flex flex-col h-full min-h-screen px-6 md:px-12 lg:px-24 py-10 bg-white overflow-y-auto">
-        <div className="flex-none mb-10 lg:mb-0">
-           <Link href="/" className="inline-block hover:opacity-80 transition-opacity">
-             <Logo variant="full" height={32} />
-           </Link>
+      <div className="w-full max-w-[1000px] grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+        
+        {/* LEFT SIDE - BRANDING */}
+        <div className="hidden lg:block space-y-6 px-8">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg">
+              <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+              </svg>
+            </div>
+            <span className="text-4xl font-bold tracking-tight text-slate-900 [font-family:var(--font-marketing-display,system-ui)]">
+              Soplantila
+            </span>
+          </div>
+          
+          <h1 className="text-5xl font-bold text-slate-900 leading-tight tracking-tight [font-family:var(--font-marketing-display,system-ui)]">
+            Sosial media yang gak bikin pusing
+          </h1>
+          
+          <p className="text-xl text-slate-600 leading-relaxed">
+            Terhubung dengan teman, berbagi momen, dan nikmati konten tanpa gangguan iklan atau algoritma yang maksa.
+          </p>
+
+          <div className="grid grid-cols-2 gap-4 pt-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                <ShieldCheck className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900 text-sm">Privasi Terjaga</div>
+                <div className="text-xs text-slate-500">Data lo aman</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50">
+                <svg className="h-5 w-5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900 text-sm">Super Cepat</div>
+                <div className="text-xs text-slate-500">Loading instant</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 flex flex-col justify-center max-w-[400px] w-full mx-auto">
-           <div className="mb-8">
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">
-                 Selamat datang kembali.
-              </h1>
-              <p className="text-slate-500 text-sm">
-                 Lanjutkan perjalanan refleksi Anda hari ini.
-              </p>
-           </div>
+        {/* RIGHT SIDE - LOGIN FORM */}
+        <div className="w-full max-w-[400px] mx-auto lg:mx-0">
+          <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-200/60 p-8 lg:p-10">
+            
+            {/* Mobile Logo */}
+            <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg">
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+                </svg>
+              </div>
+              <span className="text-2xl font-bold text-slate-900 [font-family:var(--font-marketing-display,system-ui)]">
+                Soplantila
+              </span>
+            </div>
 
-           {serverError && (
-             <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 text-sm animate-in fade-in">
-               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-               <span>{serverError}</span>
-             </div>
-           )}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Masuk ke akun lo</h2>
+              <p className="text-sm text-slate-500">Lanjutin scroll feed yang kemarin</p>
+            </div>
 
-           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-              <div className="space-y-4">
-                 <div className="relative group">
-                    <input 
-                       {...register("email")}
-                       type="email" 
-                       placeholder="Email address" 
-                       className={`w-full pl-11 pr-4 py-3 bg-white border ${errors.email ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-slate-900'} rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all shadow-sm`}
-                    />
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                       <Mail className="w-4 h-4" />
-                    </div>
-                 </div>
-                 {errors.email && <p className="text-xs text-red-500 ml-1">{errors.email.message}</p>}
+            {serverError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-700 text-sm">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <span>{serverError}</span>
+              </div>
+            )}
 
-                 <div className="relative group">
-                    <input 
-                       {...register("password")}
-                       type={showPassword ? "text" : "password"}
-                       placeholder="Password" 
-                       className={`w-full pl-11 pr-11 py-3 bg-white border ${errors.password ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-slate-900'} rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all shadow-sm`}
-                    />
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                       <Lock className="w-4 h-4" />
-                    </div>
-                    <button
-                      type="button"
-                      aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                 </div>
-                 {errors.password && <p className="text-xs text-red-500 ml-1">{errors.password.message}</p>}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              
+              <div className="space-y-1">
+                <div className="relative">
+                  <input 
+                    {...register("email")}
+                    type="email" 
+                    placeholder="Email atau username" 
+                    className={`w-full px-4 py-3.5 bg-slate-50 border ${errors.email ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-slate-900'} rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white transition-all`}
+                  />
+                </div>
+                {errors.email && <p className="text-xs text-red-600 ml-1 font-medium">{errors.email.message}</p>}
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                 <label className="flex items-center gap-2 cursor-pointer group select-none">
-                    <div className="relative flex items-center">
-                        <input type="checkbox" className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-slate-300 shadow-sm checked:bg-slate-900 checked:border-slate-900 transition-all" />
-                        <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <span className="text-slate-500 font-medium group-hover:text-slate-700">Ingat saya</span>
-                 </label>
-                 <Link href="/forgot-password" className="font-semibold text-slate-900 hover:underline decoration-slate-300 underline-offset-4">
-                    Lupa password?
-                 </Link>
+              <div className="space-y-1">
+                <div className="relative">
+                  <input 
+                    {...register("password")}
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password" 
+                    className={`w-full px-4 py-3.5 pr-12 bg-slate-50 border ${errors.password ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-slate-900'} rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white transition-all`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-xs text-red-600 ml-1 font-medium">{errors.password.message}</p>}
               </div>
 
               <button 
-                 type="submit" 
-                 disabled={isSubmitting}
-                 className="w-full bg-[#0B0C0E] hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-slate-900/10 hover:shadow-slate-900/20 hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base shadow-lg shadow-slate-900/20"
               >
-                 {isSubmitting ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                 ) : (
-                    <>
-                      Masuk
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                 )}
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    Masuk
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
               </button>
+
+              <div className="text-center">
+                <Link href="/forgot-password" className="text-sm font-semibold text-slate-900 hover:underline">
+                  Lupa password?
+                </Link>
+              </div>
+
+              <div className="relative flex items-center gap-3 py-3">
+                <div className="flex-1 h-px bg-slate-200"></div>
+                <span className="text-xs text-slate-400 font-medium">ATAU</span>
+                <div className="flex-1 h-px bg-slate-200"></div>
+              </div>
 
               <button
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isGoogleRedirecting}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white py-3.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full rounded-xl border-2 border-slate-200 bg-white py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 flex items-center justify-center gap-3 transition-all disabled:opacity-60"
               >
                 {isGoogleRedirecting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <GoogleLogo className="h-5 w-5" />
                 )}
                 Masuk dengan Google
               </button>
-           </form>
+            </form>
+          </div>
 
-           <div className="mt-8 text-center text-sm text-slate-500">
+          <div className="mt-6 text-center bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5">
+            <p className="text-sm text-slate-600">
               Belum punya akun?{' '}
               <Link href="/signup" className="font-bold text-slate-900 hover:underline">
-                 Daftar gratis
+                Daftar
               </Link>
-           </div>
+            </p>
+          </div>
+
+          <div className="mt-6 flex justify-center items-center gap-2 text-xs text-slate-400">
+            <ShieldCheck className="w-4 h-4" />
+            <span>Koneksi aman & terenkripsi SSL</span>
+          </div>
         </div>
 
-        <div className="flex-none mt-10 text-center flex justify-center gap-2 text-[10px] uppercase tracking-widest text-slate-400">
-           <ShieldCheck className="w-3 h-3" />
-           <span>Secure SSL Connection</span>
-        </div>
-      </div>
-
-      {/* --- RIGHT SIDE --- */}
-      <div className="hidden lg:flex relative bg-[#050505] items-center justify-center overflow-hidden h-screen sticky top-0">
-         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20"></div>
-         <div className="relative z-10 text-center px-12">
-            <h2 className="text-3xl font-serif text-white mb-4 leading-normal">&ldquo;Ketenangan bukanlah saat tidak ada badai, melainkan ketenangan di tengah badai itu sendiri.&rdquo;</h2>
-            <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs text-slate-300 border border-white/10">
-               <span>Generated by Reflector AI</span>
-            </div>
-         </div>
       </div>
     </div>
   );

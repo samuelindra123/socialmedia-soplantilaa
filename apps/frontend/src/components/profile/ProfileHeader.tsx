@@ -137,7 +137,7 @@ export default function ProfileHeader({ user, isOwnProfile, stats, followStatus 
 
   const handleFollowClick = () => {
     if (!currentUser) {
-      toast.error('Masuk terlebih dahulu untuk mengikuti pengguna');
+      toast.error('Login terlebih dahulu untuk mengikuti pengguna');
       router.push('/login');
       return;
     }
@@ -155,7 +155,7 @@ export default function ProfileHeader({ user, isOwnProfile, stats, followStatus 
 
   const handleMessageClick = () => {
     if (!currentUser) {
-      toast.error('Masuk terlebih dahulu untuk mengirim pesan');
+      toast.error('Login terlebih dahulu untuk mengirim pesan');
       router.push('/login');
       return;
     }

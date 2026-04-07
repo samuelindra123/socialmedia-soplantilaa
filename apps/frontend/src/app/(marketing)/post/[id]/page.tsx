@@ -226,7 +226,7 @@ export default function PublicPostPage() {
                             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
                         >
                             <LogIn className="w-4 h-4" />
-                            Masuk
+                            Login
                         </button>
                         <button
                             onClick={() => router.push("/signup")}
@@ -270,7 +270,7 @@ export default function PublicPostPage() {
                     {hasMedia && (
                         <div className="relative w-full bg-gray-100">
                             {videoUrl ? (
-                                <div className="relative w-full aspect-video bg-black">
+                                <div className="relative w-full aspect-video bg-slate-900">
                                     <video
                                         src={videoUrl}
                                         poster={thumbnailUrl || undefined}
@@ -362,20 +362,20 @@ export default function PublicPostPage() {
                     {/* CTA Section */}
                     <div className="px-4 py-4 bg-gray-50 border-t border-gray-100">
                         <p className="text-center text-gray-600 text-sm mb-3">
-                            Masuk untuk berinteraksi dengan postingan ini
+                            Login untuk berinteraksi dengan postingan ini
                         </p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => router.push("/login")}
                                 className="flex-1 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors"
                             >
-                                Masuk
+                                Login
                             </button>
                             <button
                                 onClick={() => router.push("/signup")}
                                 className="flex-1 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
                             >
-                                Daftar Gratis
+                                Join the Circle
                             </button>
                         </div>
                     </div>
@@ -385,7 +385,7 @@ export default function PublicPostPage() {
             {/* Login Prompt Modal */}
             {showLoginPrompt && (
                 <div 
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50"
                     onClick={() => setShowLoginPrompt(false)}
                 >
                     <div 
@@ -396,9 +396,9 @@ export default function PublicPostPage() {
                             <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
                                 <LogIn className="w-6 h-6 text-gray-600" />
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-1">Masuk Diperlukan</h3>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-1">Login Diperlukan</h3>
                             <p className="text-gray-500 text-sm">
-                                Untuk berinteraksi dengan postingan ini, silakan masuk atau daftar akun.
+                                Untuk berinteraksi dengan postingan ini, silakan Login atau daftar akun.
                             </p>
                         </div>
                         <div className="space-y-2">
@@ -406,13 +406,13 @@ export default function PublicPostPage() {
                                 onClick={() => router.push("/signup")}
                                 className="w-full py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
                             >
-                                Daftar Gratis
+                                Join the Circle
                             </button>
                             <button
                                 onClick={() => router.push("/login")}
                                 className="w-full py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
                             >
-                                Masuk
+                                Login
                             </button>
                             <button
                                 onClick={() => setShowLoginPrompt(false)}

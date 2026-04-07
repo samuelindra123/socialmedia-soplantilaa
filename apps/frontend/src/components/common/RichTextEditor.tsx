@@ -39,7 +39,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-indigo-600 hover:underline cursor-pointer',
+          class: 'text-emerald-600 hover:underline cursor-pointer',
           target: '_blank',
           rel: 'noopener noreferrer',
         },
@@ -110,7 +110,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden flex flex-col bg-white dark:bg-slate-900 relative">
       {/* Link Modal */}
       {isLinkModalOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl p-4 w-full max-w-md animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold text-slate-900 dark:text-white">Insert Link</h3>
@@ -142,7 +142,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
               </button>
               <button
                 onClick={saveLink}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
               >
                 Save
               </button>

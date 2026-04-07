@@ -11,6 +11,7 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { RegisterDto } from './dto/register.dto';
@@ -36,6 +37,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -48,30 +50,40 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @Post('verify-otp/:userId')
-  verifyEmailByOtp(@Param('userId') userId: string, @Body() dto: VerifyOtpDto) {
-    return this.authService.verifyEmailByOtp(userId, dto.otp);
+  verifyEmailByOtp(
+    @Param('userId') userId: string,
+    @Body() dto: VerifyOtpDto,
+    @Req() req: Request,
+  ) {
+    const meta = this.extractSessionMeta(req);
+    return this.authService.verifyEmailByOtp(userId, dto.otp, meta);
   }
 
   @Public()
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 resends per minute
   @Post('resend-verification')
   resendVerification(@Body('email') email: string) {
     return this.authService.resendVerification(email);
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 login attempts per minute
   @Post('login')
   login(@Body() dto: LoginDto, @Req() req: Request) {
     return this.authService.login(dto, this.extractSessionMeta(req));
   }
 
   @Public()
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 reset requests per minute
   @Post('forgot-password')
   requestReset(@Body() dto: ForgotPasswordDto) {
     return this.authService.requestPasswordReset(dto.email);
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 OTP attempts per minute
   @Post('forgot-password/verify-otp')
   verifyResetOtp(@Body() dto: VerifyResetOtpDto) {
     return this.authService.verifyPasswordResetOtp(dto.email, dto.otp);
@@ -157,7 +169,8 @@ export class AuthController {
       : null;
 
     const mode = parsedState?.mode || 'login';
-    const redirect = parsedState?.redirect || (mode === 'link' ? '/pengaturan' : '/feed');
+    const redirect =
+      parsedState?.redirect || (mode === 'link' ? '/pengaturan' : '/feed');
 
     const googleUser = (
       req as Request & {

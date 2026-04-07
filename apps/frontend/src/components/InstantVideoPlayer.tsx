@@ -136,7 +136,7 @@ export function InstantVideoPlayer({
 
   return (
     <div
-      className={`relative bg-black group ${className}`}
+      className={`relative bg-slate-900 group ${className}`}
       onMouseMove={handleVideoInteraction}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
@@ -163,7 +163,7 @@ export function InstantVideoPlayer({
         onClick={handlePlayPause}
       >
         {!isPlaying && (
-          <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border-2 border-white/40 hover:bg-black/60 transition-all hover:scale-110 shadow-2xl">
+          <div className="w-20 h-20 rounded-full bg-slate-900/40 backdrop-blur-md flex items-center justify-center border-2 border-white/40 hover:bg-slate-900/60 transition-all hover:scale-110 shadow-2xl">
             <Play className="w-8 h-8 text-white fill-white ml-1" />
           </div>
         )}
@@ -229,7 +229,7 @@ export function InstantVideoPlayer({
 
           {/* Quality Badge */}
           {showQualityBadge && (
-            <div className="bg-black/60 backdrop-blur text-white text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-2">
+            <div className="bg-slate-900/60 backdrop-blur text-white text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-2">
               <span className="inline-block w-2 h-2 bg-green-400 rounded-full" />
               {currentQuality.toUpperCase()}
             </div>
@@ -239,7 +239,7 @@ export function InstantVideoPlayer({
 
       {/* Processing Badge */}
       {showProcessingStatus && video.status === 'PROCESSING' && (
-        <div className="absolute top-4 right-4 bg-black/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2">
+        <div className="absolute top-4 right-4 bg-slate-900/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2">
           <span className="inline-block w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
           Processing...
         </div>
@@ -247,7 +247,7 @@ export function InstantVideoPlayer({
 
       {/* Complete Badge */}
       {showQualityBadge && video.status === 'COMPLETED' && (
-        <div className="absolute top-4 left-4 bg-black/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2">
+        <div className="absolute top-4 left-4 bg-slate-900/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2">
           <span className="inline-block w-2 h-2 bg-green-400 rounded-full" />
           HD Ready
         </div>

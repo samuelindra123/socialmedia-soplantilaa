@@ -231,7 +231,7 @@ function FeedVideoPlayerComponent({ postId, video, className = '' }: FeedVideoPl
   
   if (!videoUrl) {
     return (
-      <div className={`relative bg-black flex items-center justify-center ${className}`}>
+      <div className={`relative bg-slate-900 flex items-center justify-center ${className}`}>
         <span className="text-white/60 text-sm">Video tidak tersedia</span>
       </div>
     );
@@ -247,7 +247,7 @@ function FeedVideoPlayerComponent({ postId, video, className = '' }: FeedVideoPl
   return (
     <div
       ref={containerRef}
-      className={`relative bg-black group ${className}`}
+      className={`relative bg-slate-900 group ${className}`}
       onMouseMove={showControlsTemporarily}
       onMouseLeave={() => displayPlaying && store.getState().hideControls()}
     >
@@ -272,7 +272,7 @@ function FeedVideoPlayerComponent({ postId, video, className = '' }: FeedVideoPl
       
       {/* Buffering Indicator */}
       {displayBuffering && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/20">
           <Loader2 className="w-12 h-12 text-white animate-spin" />
         </div>
       )}
@@ -283,7 +283,7 @@ function FeedVideoPlayerComponent({ postId, video, className = '' }: FeedVideoPl
         onClick={handleVideoClick}
       >
         {!displayPlaying && !displayBuffering && (
-          <div className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 hover:bg-black/70 transition-all hover:scale-110 shadow-2xl">
+          <div className="w-20 h-20 rounded-full bg-slate-900/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 hover:bg-slate-900/70 transition-all hover:scale-110 shadow-2xl">
             <Play className="w-8 h-8 text-white fill-white ml-1" />
           </div>
         )}
@@ -342,7 +342,7 @@ function FeedVideoPlayerComponent({ postId, video, className = '' }: FeedVideoPl
           </div>
           
           {/* Quality Badge */}
-          <div className="bg-black/60 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5">
+          <div className="bg-slate-900/60 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
             {video.status === 'PROCESSING' ? 'Processing' : 'HD'}
           </div>

@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { MailModule } from '../mail/mail.module';
+import { EmailModule } from '../email/email.module';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 
@@ -29,6 +30,7 @@ import { GoogleAuthGuard } from './guards/google-auth.guard';
       },
     }),
     MailModule,
+    EmailModule,
     ConfigModule,
   ],
   controllers: [AuthController],

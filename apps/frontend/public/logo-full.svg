@@ -1,0 +1,21 @@
+<svg width="580" height="128" viewBox="0 0 580 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="50%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon: outer ring -->
+  <circle cx="64" cy="64" r="56" stroke="url(#grad)" stroke-width="2" stroke-opacity="0.2" fill="none"/>
+
+  <!-- Icon: main donut circle -->
+  <path fill="url(#grad)" d="M64 16C37.5 16 16 37.5 16 64s21.5 48 48 48 48-21.5 48-48S90.5 16 64 16zm0 8c22.1 0 40 17.9 40 40S86.1 104 64 104 24 86.1 24 64s17.9-40 40-40zm-8 40a8 8 0 1 1 16 0 8 8 0 0 1-16 0z"/>
+
+  <!-- Icon: pulse dot -->
+  <circle cx="104" cy="40" r="8" fill="#EC4899"/>
+
+  <!-- Wordmark -->
+  <text x="148" y="82" font-family="'Space Grotesk', 'Inter', -apple-system, Arial, sans-serif" font-size="64" font-weight="700" letter-spacing="-1" fill="#0F172A">Soplantila</text>
+</svg>

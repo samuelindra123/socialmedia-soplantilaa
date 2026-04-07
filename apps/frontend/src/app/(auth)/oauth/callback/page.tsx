@@ -1,55 +1,49 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import useAuthStore from "@/store/auth";
-import { completeOAuthSessionAction } from "@/app/actions/auth-actions";
+import { Suspense, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { useAuthStore } from "@/store/auth";
 
 function OAuthCallbackContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const [message, setMessage] = useState("Menyiapkan sesi aman...");
+  const router = useRouter();
 
   useEffect(() => {
-    const token = searchParams.get("token");
-    const sessionToken = searchParams.get("sessionToken");
-    const redirect = searchParams.get("redirect") || "/feed";
+    const handleCallback = async () => {
+      const error = searchParams.get("error");
+      if (error) {
+        toast.error(error === "google_oauth_unavailable" ? "Google OAuth tidak tersedia" : "Login gagal");
+        router.push("/login?error=" + error);
+        return;
+      }
 
-    if (!token || !sessionToken) {
-      const id = requestAnimationFrame(() => {
-        setMessage("Token OAuth tidak ditemukan.");
-      });
-      return () => cancelAnimationFrame(id);
-    }
-
-    const persistSession = async () => {
       try {
-        const cookieResult = await completeOAuthSessionAction(token, sessionToken);
-        if (!cookieResult.ok) {
-          throw new Error(cookieResult.message);
-        }
-
         await useAuthStore.getState().checkAuth();
-        router.replace(redirect);
-      } catch (error) {
-        console.error(error);
-        const id = requestAnimationFrame(() => {
-          setMessage("Gagal menyimpan sesi OAuth.");
-        });
-        return () => cancelAnimationFrame(id);
+        const user = useAuthStore.getState().user;
+        
+        if (user?.profile?.isOnboardingComplete) {
+          toast.success("Login berhasil!");
+          router.push("/feed");
+        } else {
+          router.push("/onboarding");
+        }
+      } catch (err) {
+        toast.error("Gagal memproses login");
+        router.push("/login");
       }
     };
 
-    persistSession();
-  }, [router, searchParams]);
+    handleCallback();
+  }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-6">
-      <div className="rounded-3xl bg-white shadow-xl p-10 text-center space-y-4">
-        <Loader2 className="mx-auto h-10 w-10 animate-spin text-slate-900" />
-        <p className="text-sm font-semibold text-slate-700">{message}</p>
-        <p className="text-xs text-slate-400">Jangan tutup jendela ini, kami sedang mengamankan akunmu.</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      <div className="text-center">
+        <Loader2 className="w-12 h-12 animate-spin text-slate-900 mx-auto mb-4" />
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">Memproses login...</h2>
+        <p className="text-sm text-slate-500">Tunggu sebentar</p>
       </div>
     </div>
   );
@@ -57,17 +51,11 @@ function OAuthCallbackContent() {
 
 export default function OAuthCallbackPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-6">
-          <div className="rounded-3xl bg-white shadow-xl p-10 text-center space-y-4">
-            <Loader2 className="mx-auto h-10 w-10 animate-spin text-slate-900" />
-            <p className="text-sm font-semibold text-slate-700">Menyiapkan sesi aman...</p>
-            <p className="text-xs text-slate-400">Jangan tutup jendela ini, kami sedang mengamankan akunmu.</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-900" />
+      </div>
+    }>
       <OAuthCallbackContent />
     </Suspense>
   );

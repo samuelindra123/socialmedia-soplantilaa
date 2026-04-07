@@ -121,12 +121,12 @@ export function InstantVideoPlayer({
     }
   }, [video.originalUrl, video.processedUrl, video.qualityUrls]);
 
-  // Intersection Observer - Autoplay saat video masuk viewport, stop saat keluar
+  // Intersection Observer - Autoplay saat video Login viewport, stop saat keluar
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          // Video masuk viewport - autoplay
+          // Video Login viewport - autoplay
           setIsVisible(true);
           if (videoRef.current && currentVideoUrl) {
             videoRef.current.play().catch(err => console.log('Auto-play prevented:', err));
@@ -232,7 +232,7 @@ export function InstantVideoPlayer({
   };
 
   return (
-    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center overflow-hidden group ${className}`}>
+    <div ref={containerRef} className={`relative w-full bg-slate-900 flex items-center justify-center overflow-hidden group ${className}`}>
       {/* VIDEO ELEMENT */}
       {currentVideoUrl && (
         <video

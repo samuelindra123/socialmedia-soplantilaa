@@ -1,0 +1,22 @@
+<svg width="800" height="800" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="400" cy="400" r="380" fill="#0F172A"/>
+  
+  <!-- Inner Circle Glow -->
+  <circle cx="400" cy="400" r="320" fill="#1E293B" opacity="0.6"/>
+  
+  <!-- Letter R - Modern Geometric -->
+  <path d="M280 280 L280 520 L320 520 L320 420 L380 420 L440 520 L490 520 L420 410 C450 400 470 370 470 330 C470 280 430 240 380 240 L280 240 L280 280 Z M320 280 L380 280 C410 280 430 300 430 330 C430 360 410 380 380 380 L320 380 L320 280 Z" fill="#FAFAFA"/>
+  
+  <!-- Accent Circle - Top Right -->
+  <circle cx="520" cy="280" r="40" fill="#64748B" opacity="0.8"/>
+  
+  <!-- Accent Circle - Bottom Left -->
+  <circle cx="280" cy="520" r="30" fill="#64748B" opacity="0.6"/>
+  
+  <!-- Decorative Line -->
+  <line x1="500" y1="400" x2="600" y2="400" stroke="#64748B" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Text: Renunganku -->
+  <text x="400" y="650" font-family="Space Grotesk, sans-serif" font-size="60" font-weight="600" fill="#FAFAFA" text-anchor="middle">Soplantila</text>
+</svg>

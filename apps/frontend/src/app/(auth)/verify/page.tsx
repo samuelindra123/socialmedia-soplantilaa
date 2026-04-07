@@ -1,21 +1,17 @@
 "use client";
 
-import { Suspense } from "react";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { 
   Loader2, 
   CheckCircle2, 
-  XCircle, 
   Mail,
   ArrowRight,
   RefreshCw,
-  Clock,
-  AlertCircle
+  ShieldCheck
 } from "lucide-react";
-import Logo from "@/components/Logo";
 import { useAuthStore } from "@/store/auth";
 import {
   resendVerificationAction,
@@ -32,47 +28,28 @@ function VerifyContent() {
   const email = searchParams.get("email");
 
   const [status, setStatus] = useState<'verifying' | 'success' | 'error' | 'idle'>('idle');
-  const [errorMessage, setErrorMessage] = useState("");
-  const [boxes, setBoxes] = useState<string[]>(Array(8).fill(""));
+  const [boxes, setBoxes] = useState<string[]>(Array(6).fill(""));
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [canResend, setCanResend] = useState(false);
 
-  // Initialize timer from localStorage on mount
   useEffect(() => {
     const savedEndTime = localStorage.getItem('resend_otp_end_time');
     if (savedEndTime) {
       const remaining = Math.ceil((parseInt(savedEndTime) - Date.now()) / 1000);
-      if (remaining > 0) {
-        setCountdown(remaining);
-        setCanResend(false);
-      } else {
-        setCountdown(0);
-        setCanResend(true);
-      }
+      if (remaining > 0) setCountdown(remaining);
     } else {
-      // First visit or no timer, start with 60s
-      startTimer(60);
+      setCountdown(60);
+      localStorage.setItem('resend_otp_end_time', (Date.now() + 60000).toString());
     }
   }, []);
 
-  const startTimer = (seconds: number) => {
-    const endTime = Date.now() + seconds * 1000;
-    localStorage.setItem('resend_otp_end_time', endTime.toString());
-    setCountdown(seconds);
-    setCanResend(false);
-  };
-
-  // Countdown timer logic
   useEffect(() => {
     if (countdown > 0) {
       const timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(timer);
-            setCanResend(true);
             localStorage.removeItem('resend_otp_end_time');
             return 0;
           }
@@ -83,19 +60,15 @@ function VerifyContent() {
     }
   }, [countdown]);
 
-  // Auto verify if token exists
   useEffect(() => {
     if (token) {
       verifyToken(token);
-    } else {
-      setStatus('idle');
     }
   }, [token]);
 
-  // Auto-submit when all fields filled
   useEffect(() => {
     const otp = boxes.join("");
-    if (otp.length === 8 && !isSubmitting) {
+    if (otp.length === 6 && !isSubmitting) {
       handleOtpSubmit(new Event('submit') as any);
     }
   }, [boxes]);
@@ -104,266 +77,244 @@ function VerifyContent() {
     setStatus('verifying');
     try {
       const result = await verifyEmailTokenAction(tokenStr);
-      if (!result.ok) {
-        throw new Error(result.message);
-      }
+      if (!result.ok) throw new Error(result.message);
       setStatus('success');
       toast.success("Email berhasil diverifikasi!");
-
       await useAuthStore.getState().checkAuth();
-
       setTimeout(() => router.push('/onboarding'), 2000);
     } catch (error: any) {
       setStatus('error');
-      setErrorMessage(error?.message || "Link verifikasi tidak valid atau sudah kadaluarsa");
+      toast.error(error?.message || "Link verifikasi tidak valid");
     }
   };
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     if (e) e.preventDefault();
     const otp = boxes.join("");
-    if (otp.length !== 8) return;
+    if (otp.length !== 6) return;
 
     setIsSubmitting(true);
     try {
-      if (!userId) {
-        throw new Error("User ID tidak ditemukan. Silakan login ulang atau gunakan link verifikasi dari email.");
-      }
-
+      if (!userId) throw new Error("User ID tidak ditemukan");
       const result = await verifyEmailOtpAction(userId, otp);
-      if (!result.ok) {
-        throw new Error(result.message);
-      }
+      if (!result.ok) throw new Error(result.message);
+      
+      // Store full auth data
+      useAuthStore.setState({
+        user: result.user,
+        token: result.accessToken,
+        sessionToken: result.sessionToken,
+        isAuthenticated: true,
+        isLoading: false,
+      });
       
       setStatus('success');
       toast.success("Verifikasi berhasil!");
-
-      await useAuthStore.getState().checkAuth();
-
       setTimeout(() => router.push('/onboarding'), 2000);
     } catch (error: any) {
-      const serverMessage = error.response?.data?.message;
-      const errorMsg = serverMessage === "OTP tidak valid" 
-        ? "Kode OTP salah, pastikan Anda memasukkan kode terbaru" 
-        : serverMessage || "Terjadi kesalahan saat verifikasi";
-      
-      toast.error(errorMsg);
-      
-      // Only clear boxes if OTP is invalid, not for other errors
-      if (serverMessage === "OTP tidak valid") {
-        setBoxes(Array(8).fill(""));
-        inputsRef.current[0]?.focus();
-      }
+      toast.error(error.message || "Kode OTP salah");
+      setBoxes(Array(6).fill(""));
+      inputsRef.current[0]?.focus();
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleResend = async () => {
-    if (!canResend || !email) return;
-
+    if (countdown > 0 || !email) return;
     setIsResending(true);
     try {
       const result = await resendVerificationAction(email);
-      if (!result.ok) {
-        throw new Error(result.message);
-      }
-      toast.success("Kode verifikasi baru telah dikirim!");
-      startTimer(60);
+      if (!result.ok) throw new Error(result.message);
+      toast.success("Kode baru dikirim!");
+      setCountdown(60);
+      localStorage.setItem('resend_otp_end_time', (Date.now() + 60000).toString());
     } catch (error: any) {
-      toast.error(error?.message || "Gagal mengirim ulang kode");
+      toast.error(error.message || "Gagal kirim ulang");
     } finally {
       setIsResending(false);
     }
   };
 
   const handleChange = (index: number, value: string) => {
-    if (!/^[a-zA-Z0-9]*$/.test(value)) return;
-
+    if (!/^\d*$/.test(value)) return;
     const newBoxes = [...boxes];
-    newBoxes[index] = value.slice(-1).toUpperCase(); // Take only last char and uppercase
+    newBoxes[index] = value.slice(-1);
     setBoxes(newBoxes);
-
-    // Move focus forward
-    if (value && index < 7) {
+    if (value && index < 5) {
       inputsRef.current[index + 1]?.focus();
     }
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    // Clean first (remove spaces/symbols), then slice to ensure we get 8 valid chars
-    const pastedData = e.clipboardData.getData('text').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase();
-    
-    if (pastedData) {
-      const newBoxes = [...boxes];
-      pastedData.split('').forEach((char, i) => {
-        if (i < 8) newBoxes[i] = char;
-      });
-      setBoxes(newBoxes);
-      
-      // Focus last filled or first empty
-      const nextEmpty = newBoxes.findIndex(b => !b);
-      const focusIndex = nextEmpty === -1 ? 7 : nextEmpty;
-      inputsRef.current[focusIndex]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace') {
-      if (!boxes[index] && index > 0) {
-        const next = [...boxes];
-        next[index - 1] = '';
-        setBoxes(next);
-        inputsRef.current[index - 1]?.focus();
-      } else {
-        const next = [...boxes];
-        next[index] = '';
-        setBoxes(next);
-      }
-    } else if (e.key === 'ArrowLeft' && index > 0) {
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !boxes[index] && index > 0) {
       inputsRef.current[index - 1]?.focus();
-    } else if (e.key === 'ArrowRight' && index < inputsRef.current.length - 1) {
-      inputsRef.current[index + 1]?.focus();
     }
   };
 
   if (status === 'verifying') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-        <div className="relative w-20 h-20 mb-6">
-          <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
-          <div className="absolute inset-0 border-4 border-slate-900 rounded-full border-t-transparent animate-spin"></div>
-          <Loader2 className="absolute inset-0 m-auto w-8 h-8 text-slate-900 animate-pulse" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-slate-900 mx-auto mb-4" />
+          <p className="text-slate-600">Memverifikasi...</p>
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Memverifikasi...</h2>
-        <p className="text-slate-500">Mohon tunggu sebentar, kami sedang memvalidasi link Anda.</p>
       </div>
     );
   }
 
   if (status === 'success') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6 animate-bounce">
-          <CheckCircle2 className="w-10 h-10 text-green-600" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Verifikasi Berhasil!</h2>
-        <p className="text-slate-500 mb-8">Akun Anda telah aktif. Mengalihkan ke halaman onboarding...</p>
-        <div className="w-full max-w-xs bg-slate-100 rounded-full h-1.5 overflow-hidden">
-          <div className="h-full bg-green-500 animate-[loading_2s_ease-in-out_infinite]"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === 'error') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
-          <XCircle className="w-10 h-10 text-red-500" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Verifikasi Gagal</h2>
-        <p className="text-slate-500 mb-8 max-w-xs mx-auto">{errorMessage}</p>
-        <Link 
-          href="/login"
-          className="inline-flex items-center justify-center px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-all"
-        >
-          Kembali ke Login
-        </Link>
-      </div>
-    );
-  }
-
-  // Default: OTP Input View
-  return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-50 rounded-2xl mb-6 border border-slate-100 shadow-sm">
-          <Mail className="w-8 h-8 text-slate-900" />
-        </div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Cek Email Anda</h1>
-        <p className="text-slate-500 text-sm">
-          Kami telah mengirimkan kode verifikasi 8 digit ke <br/>
-          <span className="font-bold text-slate-900">{email}</span>
-        </p>
-      </div>
-
-      <form onSubmit={handleOtpSubmit} className="space-y-8">
-        {/* OTP Inputs */}
-        <div className="flex justify-center gap-2 sm:gap-3">
-          {boxes.map((digit, index) => (
-            <input
-              key={index}
-              ref={(el) => { inputsRef.current[index] = el }}
-              type="text"
-              inputMode="text"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleChange(index, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(index, e)}
-              onPaste={handlePaste}
-              className={`w-9 h-12 sm:w-11 sm:h-14 text-center text-xl font-bold bg-white border-2 rounded-xl outline-none transition-all ${
-                digit 
-                  ? 'border-slate-900 text-slate-900 shadow-sm' 
-                  : 'border-slate-200 text-slate-400 focus:border-slate-400'
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isSubmitting || boxes.some(b => !b)}
-          className="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10"
-        >
-          {isSubmitting ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <>
-              Verifikasi
-              <ArrowRight className="w-4 h-4" />
-            </>
-          )}
-        </button>
-
-        {/* Resend Timer */}
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
         <div className="text-center">
-          {canResend ? (
-            <div className="space-y-2">
-              <p className="text-sm text-slate-500">Tidak menerima kode?</p>
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={isResending}
-                className="text-sm font-bold text-indigo-600 hover:text-indigo-700 hover:underline flex items-center justify-center gap-2 mx-auto"
-              >
-                {isResending ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-3 h-3" />
-                )}
-                Kirim Ulang Kode
-              </button>
+          <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Berhasil!</h2>
+          <p className="text-slate-600">Redirect ke onboarding...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4 font-sans selection:bg-slate-200">
+      <div className="w-full max-w-[1000px] grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+        
+        {/* LEFT SIDE - BRANDING */}
+        <div className="hidden lg:block space-y-6 px-8">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg">
+              <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+              </svg>
             </div>
-          ) : (
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100">
-              <Clock className="w-3 h-3 text-slate-400" />
-              <span className="text-xs font-mono text-slate-500">
-                Kirim ulang dalam {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}
+            <span className="text-4xl font-bold tracking-tight text-slate-900 [font-family:var(--font-marketing-display,system-ui)]">
+              Soplantila
+            </span>
+          </div>
+          
+          <h1 className="text-5xl font-bold text-slate-900 leading-tight tracking-tight [font-family:var(--font-marketing-display,system-ui)]">
+            Verifikasi email lo
+          </h1>
+          
+          <p className="text-xl text-slate-600 leading-relaxed">
+            Cek inbox email lo, kami kirim kode verifikasi 6 digit. Masukkin kodenya di sini.
+          </p>
+
+          <div className="grid grid-cols-2 gap-4 pt-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                <Mail className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900 text-sm">Cek Email</div>
+                <div className="text-xs text-slate-500">Inbox atau spam</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50">
+                <svg className="h-5 w-5 text-orange-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M12 6v6l4 2"></path>
+                </svg>
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900 text-sm">Kode Expire</div>
+                <div className="text-xs text-slate-500">10 menit</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT SIDE - VERIFY FORM */}
+        <div className="w-full max-w-[400px] mx-auto lg:mx-0">
+          <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-200/60 p-8 lg:p-10">
+            
+            {/* Mobile Logo */}
+            <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg">
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+                </svg>
+              </div>
+              <span className="text-2xl font-bold text-slate-900 [font-family:var(--font-marketing-display,system-ui)]">
+                Soplantila
               </span>
             </div>
-          )}
-        </div>
-      </form>
 
-      {/* Help Link */}
-      <div className="mt-8 text-center">
-        <Link href="/help" className="text-xs text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1">
-          <AlertCircle className="w-3 h-3" />
-          Butuh bantuan? Hubungi Support
-        </Link>
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Masukkan kode OTP</h2>
+              <p className="text-sm text-slate-500">
+                Kode dikirim ke <span className="font-semibold text-slate-900">{email}</span>
+              </p>
+            </div>
+
+            <form onSubmit={handleOtpSubmit} className="space-y-6">
+              <div className="flex gap-2 justify-center">
+                {boxes.map((box, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => (inputsRef.current[index] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={box}
+                    onChange={(e) => handleChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    className="w-12 h-14 text-center text-2xl font-bold bg-slate-50 border-2 border-slate-200 focus:border-slate-900 rounded-xl focus:outline-none focus:bg-white transition-all"
+                  />
+                ))}
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isSubmitting || boxes.join("").length !== 6}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base shadow-lg shadow-slate-900/20"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    Verifikasi
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={countdown > 0 || isResending}
+                  className="text-sm font-semibold text-slate-900 hover:underline disabled:text-slate-400 disabled:no-underline flex items-center justify-center gap-2 mx-auto"
+                >
+                  {isResending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  {countdown > 0 ? `Kirim ulang (${countdown}s)` : 'Kirim ulang kode'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="mt-6 text-center bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5">
+            <p className="text-sm text-slate-600">
+              Salah email?{' '}
+              <Link href="/signup" className="font-bold text-slate-900 hover:underline">
+                Daftar ulang
+              </Link>
+            </p>
+          </div>
+
+          <div className="mt-6 flex justify-center items-center gap-2 text-xs text-slate-400">
+            <ShieldCheck className="w-4 h-4" />
+            <span>Kode terenkripsi & aman</span>
+          </div>
+        </div>
+
       </div>
     </div>
   );
@@ -371,25 +322,12 @@ function VerifyContent() {
 
 export default function VerifyPage() {
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans selection:bg-slate-900 selection:text-white">
-      {/* Header */}
-      <header className="px-6 py-6 flex justify-center border-b border-slate-50">
-        <Link href="/" className="hover:opacity-80 transition-opacity">
-          <Logo variant="full" height={28} />
-        </Link>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-        <Suspense fallback={
-          <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-            <Loader2 className="w-8 h-8 text-slate-900 animate-spin" />
-            <p className="text-slate-500 mt-4">Memuat halaman verifikasi...</p>
-          </div>
-        }>
-          <VerifyContent />
-        </Suspense>
-      </main>
-    </div>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-900" />
+      </div>
+    }>
+      <VerifyContent />
+    </Suspense>
   );
 }

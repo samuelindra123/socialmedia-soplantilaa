@@ -3,7 +3,7 @@ import Logo from "@/components/Logo";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Selesaikan Profil Anda - Renunganku",
+  title: "Selesaikan Profil Anda - Soplantila",
 };
 
 export default function OnboardingLayout({

@@ -95,7 +95,7 @@ function Modal({ open, onClose, children, contentClassName, keepMounted = false 
     <div
       className={clsx(
         "fixed inset-0 z-[60] flex items-center justify-center p-4 transition-opacity duration-200",
-        open ? "bg-black/65 backdrop-blur-sm opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        open ? "bg-slate-900/65 backdrop-blur-sm opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       )}
       onClick={open ? onClose : undefined}
       aria-hidden={!open}
@@ -126,7 +126,7 @@ function PortalModal({ open, onClose, children, contentClassName }: { open: bool
   if (!open || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/65 p-4 backdrop-blur-sm" onClick={onClose}>
       <div className={clsx("bg-white dark:bg-slate-800 rounded-xl w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200", contentClassName)} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
@@ -1016,7 +1016,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                 {avatar ? (
                   <Image src={avatar} alt={username} fill sizes="32px" className="object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-600 font-bold text-xs">
+                  <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-emerald-600 font-bold text-xs">
                     {username.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -1044,7 +1044,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                 {avatar ? (
                   <Image src={avatar} alt={username} fill sizes="32px" className="object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-600 font-bold text-xs">
+                  <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-emerald-600 font-bold text-xs">
                     {username.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -1056,12 +1056,12 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                 <h3 className="font-bold text-slate-900 mb-2 mt-1 text-base leading-tight line-clamp-2" title={titleToDisplay}>{titleToDisplay}</h3>
               )}
 
-              <div className="text-slate-800 whitespace-pre-wrap break-words leading-relaxed prose prose-sm max-w-none prose-p:my-2 prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline" dangerouslySetInnerHTML={{ __html: contentToDisplay }} />
+              <div className="text-slate-800 whitespace-pre-wrap break-words leading-relaxed prose prose-sm max-w-none prose-p:my-2 prose-a:text-emerald-600 prose-a:no-underline hover:prose-a:underline" dangerouslySetInnerHTML={{ __html: contentToDisplay }} />
 
               <div className="flex flex-col gap-1 mt-2">
                 {post.links && post.links.length > 0 ? (
                   post.links.map((link, index) => (
-                    <a key={index} href={link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline text-sm block truncate">
+                    <a key={index} href={link} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline text-sm block truncate">
                       {link}
                     </a>
                   ))
@@ -1139,7 +1139,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                 {avatar ? (
                   <Image src={avatar} alt={username} fill sizes="32px" className="object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold text-xs">
+                  <div className="w-full h-full flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/30 text-emerald-600 dark:text-indigo-400 font-bold text-xs">
                     {username.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -1219,7 +1219,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                 className="w-full aspect-[4/5] max-h-[600px]"
               />
             ) : (
-              <div className="relative w-full bg-black">
+              <div className="relative w-full bg-slate-900">
                 <Image src={postImageThumbnail!} alt="Post content" width={1080} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto object-contain" />
               </div>
             )}
@@ -1255,7 +1255,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                     </>
                   ) : (
                     <div
-                      className="whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-a:text-indigo-600 dark:prose-a:text-indigo-400"
+                      className="whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-a:text-emerald-600 dark:prose-a:text-indigo-400"
                       dangerouslySetInnerHTML={{ __html: contentToDisplay }}
                     />
                   )}
@@ -1423,7 +1423,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                       {likedAvatar ? (
                         <Image src={likedAvatar} alt={displayName} width={36} height={36} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-600 text-xs font-bold">
+                        <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-emerald-600 text-xs font-bold">
                           {initial}
                         </div>
                       )}
@@ -1511,7 +1511,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
         keepMounted={isCommentPanelPrepared}
       >
         {/* Left Panel - Media dengan ukuran proporsional ala Instagram */}
-        <div className="hidden md:flex flex-[2] min-w-0 items-center justify-center bg-black">
+        <div className="hidden md:flex flex-[2] min-w-0 items-center justify-center bg-slate-900">
           {hasMedia ? (
             <div className="relative flex items-center justify-center" style={mediaBoxStyle}>
               {postImage ? (

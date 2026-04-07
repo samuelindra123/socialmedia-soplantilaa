@@ -166,8 +166,13 @@ export class ResumableVideoUploadService {
     const nextTotalBytes =
       this.getUploadedBytes(session) - previousSize + Number(file.size);
 
-    if (nextTotalBytes > MAX_VIDEO_UPLOAD_BYTES || nextTotalBytes > session.fileSize) {
-      throw new BadRequestException('Total upload melebihi batas maksimal 100MB.');
+    if (
+      nextTotalBytes > MAX_VIDEO_UPLOAD_BYTES ||
+      nextTotalBytes > session.fileSize
+    ) {
+      throw new BadRequestException(
+        'Total upload melebihi batas maksimal 100MB.',
+      );
     }
 
     session.chunkSizes.set(chunkIndex, Number(file.size));

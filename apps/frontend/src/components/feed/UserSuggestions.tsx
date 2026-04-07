@@ -51,7 +51,7 @@ export default function UserSuggestions() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-indigo-50 text-indigo-600 font-bold text-sm">
+                    <div className="w-full h-full flex items-center justify-center bg-indigo-50 text-emerald-600 font-bold text-sm">
                       {(user?.profile?.username || user?.namaLengkap || "U")
                         .charAt(0)
                         .toUpperCase()}
@@ -63,7 +63,7 @@ export default function UserSuggestions() {
                     <p className="text-slate-500">{user?.namaLengkap}</p>
                 </div>
             </Link>
-            <button onClick={() => logout()} className="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+            <button onClick={() => logout()} className="text-xs font-bold text-emerald-600 hover:text-indigo-800">
                 Keluar
             </button>
         </div>
@@ -112,7 +112,7 @@ export default function UserSuggestions() {
                                     <p className="text-[10px] text-slate-500 truncate w-24">{suggestion.namaLengkap}</p>
                                 </div>
                             </Link>
-                            <button className="text-xs font-bold text-indigo-600 hover:text-indigo-800">Ikuti</button>
+                            <button className="text-xs font-bold text-emerald-600 hover:text-indigo-800">Ikuti</button>
                         </div>
                     ))
                 ) : (
@@ -130,7 +130,7 @@ export default function UserSuggestions() {
             <Link href="#" className="hover:underline">Lokasi</Link>
             <Link href="#" className="hover:underline">Bahasa</Link>
         </div>
-        <p className="text-[11px] text-slate-400 uppercase">© 2025 RENUNGANKU</p>
+        <p className="text-[11px] text-slate-400 uppercase">© 2025 SOPLANTILA</p>
     </div>
   );
 }

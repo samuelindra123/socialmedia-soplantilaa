@@ -53,7 +53,7 @@ export default function GlobalUploadStatus() {
             <div className="flex items-start gap-2">
               <div className="pt-0.5">
                 {isRunning && (
-                  <Loader2 className="h-4 w-4 animate-spin text-indigo-600 dark:text-indigo-400" />
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-600 dark:text-indigo-400" />
                 )}
                 {task.status === 'failed' && (
                   <XCircle className="h-4 w-4 text-rose-500" />
@@ -86,7 +86,7 @@ export default function GlobalUploadStatus() {
 
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               <div
-                className="h-full bg-indigo-600 transition-all duration-300 dark:bg-indigo-400"
+                className="h-full bg-emerald-600 transition-all duration-300 dark:bg-emerald-400"
                 style={{ width: `${Math.max(0, Math.min(100, task.progress))}%` }}
               />
             </div>

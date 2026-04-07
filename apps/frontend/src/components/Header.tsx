@@ -1,141 +1,148 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Menu, X, ArrowRight, Zap } from "lucide-react";
-import Logo from "@/components/Logo";
-import Reveal from "@/components/Reveal";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Leaf, Menu, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
+
+const displayFont = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-marketing-display',
+  weight: ['500', '700'],
+});
+
+const bodyFont = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-marketing-body',
+  weight: ['400', '500', '600'],
+});
 
 export default function Header() {
-    const [isScrolled, setIsScrolled] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // Detect scroll untuk mengubah state header
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
-        };
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-    const navLinks = [
-        { name: "Fitur", href: "/features" },
-        { name: "Manifesto", href: "/manifesto" },
-        { name: "Harga", href: "/pricing" },
-        { name: "Blog", href: "/blog" },
-    ];
+  const navLinks = [
+    { name: 'Fitur', path: '/features' },
+    { name: 'Manifesto', path: '/manifesto' },
+    { name: 'Harga', path: '/pricing' },
+    { name: 'Berita', path: '/blog' },
+  ];
 
-    return (
-        <>
-            <header
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isScrolled || isMobileMenuOpen
-                    ? "bg-white/75 backdrop-blur-2xl border-b border-slate-200/60 py-3 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.02)]"
-                    : "bg-transparent border-transparent py-5"
-                    }`}
-            >
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <Reveal animation="fadeInDown" duration={800} className="w-full">
-                        <div className="flex justify-between items-center">
-
-                            {/* --- LOGO --- */}
-                            <Link href="/" className="flex items-center gap-2 group z-50 relative">
-                                <div className="text-slate-900 transition-opacity hover:opacity-80">
-                                    <Logo variant="full" height={28} />
-                                </div>
-                            </Link>
-
-                            {/* --- DESKTOP NAVIGATION --- */}
-                            <nav className="hidden md:flex items-center gap-1 bg-slate-50/80 p-1 rounded-full border border-slate-200/50 backdrop-blur-md">
-                                {navLinks.map((link) => (
-                                    <Link
-                                        key={link.name}
-                                        href={link.href}
-                                        className="px-4 py-1.5 text-[13px] font-medium text-slate-600 rounded-full hover:bg-white hover:text-slate-900 hover:shadow-sm transition-all duration-200"
-                                    >
-                                        {link.name}
-                                    </Link>
-                                ))}
-                            </nav>
-
-                            {/* --- ACTIONS --- */}
-                            <div className="flex items-center gap-3">
-                                <Link
-                                    href="/login"
-                                    className="hidden md:block text-[13px] font-medium text-slate-500 hover:text-slate-900 transition-colors px-2"
-                                >
-                                    Masuk
-                                </Link>
-
-                                {/* UPDATED CTA: AKSES BETA */}
-                                {/* Menunjukkan akses langsung/instant, bukan waitlist */}
-                                <Link
-                                    href="/signup"
-                                    className="hidden md:flex items-center gap-2 bg-[#0B0C0E] hover:bg-black text-white px-4 py-2 rounded-lg text-[13px] font-semibold transition-all hover:shadow-[0_4px_12px_-2px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 group"
-                                >
-                                    <Zap className="w-3.5 h-3.5 fill-white text-white" />
-                                    <span>Akses Beta</span>
-                                </Link>
-
-                                {/* Mobile Menu Toggle */}
-                                <button
-                                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                    className="md:hidden p-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-colors z-50 relative"
-                                    aria-label="Toggle Menu"
-                                >
-                                    {isMobileMenuOpen ? (
-                                        <X className="w-5 h-5" />
-                                    ) : (
-                                        <Menu className="w-5 h-5" />
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </Reveal>
-                </div>
-            </header>
-
-            {/* --- MOBILE MENU OVERLAY --- */}
-            <div
-                className={`fixed inset-0 z-40 bg-white/95 backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isMobileMenuOpen
-                    ? "opacity-100 translate-y-0 pointer-events-auto"
-                    : "opacity-0 -translate-y-4 pointer-events-none"
-                    }`}
-            >
-                <div className="flex flex-col h-full pt-24 px-6 pb-8">
-                    <nav className="flex flex-col gap-1">
-                        {navLinks.map((link) => (
-                            <Link
-                                key={link.name}
-                                href={link.href}
-                                className="text-2xl font-semibold text-slate-900 py-4 border-b border-slate-100 hover:pl-2 transition-all"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                {link.name}
-                            </Link>
-                        ))}
-                    </nav>
-
-                    <div className="mt-auto flex flex-col gap-4">
-                        <Link
-                            href="/login"
-                            className="w-full flex justify-center py-4 text-slate-600 font-medium border border-slate-200 rounded-xl hover:bg-slate-50"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            Masuk
-                        </Link>
-                        {/* Mobile CTA Updated */}
-                        <Link
-                            href="/signup"
-                            className="w-full flex justify-center items-center gap-2 bg-black text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            <Zap className="w-5 h-5 fill-white" />
-                            Akses Beta Sekarang
-                        </Link>
-                    </div>
-                </div>
+  return (
+    <header 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${displayFont.variable} ${bodyFont.variable} ${
+        isScrolled ? 'py-3' : 'py-5'
+      }`}
+    >
+      <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
+        <div className={`relative flex items-center justify-between rounded-full border transition-all duration-300 overflow-hidden ${
+          isScrolled 
+            ? 'bg-white/80 backdrop-blur-xl border-slate-200 shadow-sm px-6 py-3' 
+            : 'bg-white/50 backdrop-blur-sm border-slate-200/50 px-6 py-4'
+        }`}>
+          
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group relative z-10">
+            <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center group-hover:scale-105 transition-transform duration-300 shadow-md">
+               <Leaf className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
-        </>
-    );
+            <span className="[font-family:var(--font-marketing-display)] font-bold text-xl tracking-tight text-slate-900">
+              Soplantila
+            </span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-100/50 p-1 rounded-full border border-slate-200/50 backdrop-blur-md absolute left-1/2 -translate-x-1/2">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                href={link.path}
+                className={`px-4 py-2 rounded-full [font-family:var(--font-marketing-body)] text-sm font-medium transition-all duration-200 ${
+                  pathname === link.path
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                {link.name}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Desktop Auth */}
+          <div className="hidden md:flex items-center gap-3 relative z-10">
+            <Link 
+              href="/login" 
+              className="px-4 py-2 [font-family:var(--font-marketing-body)] text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              Masuk
+            </Link>
+            <Link 
+              href="/signup" 
+              className="px-5 py-2.5 rounded-full bg-slate-900 [font-family:var(--font-marketing-body)] text-sm font-medium text-white shadow-md hover:bg-slate-800 hover:shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0"
+            >
+              Daftar Gratis
+            </Link>
+          </div>
+
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="md:hidden p-2 text-slate-600 hover:text-slate-900 relative z-10"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+
+        </div>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="absolute top-[88px] left-6 right-6 bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-[2rem] shadow-2xl p-6 md:hidden flex flex-col gap-4 animate-in slide-in-from-top-4 duration-200 fade-in z-40">
+          <nav className="flex flex-col gap-2">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                href={link.path}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`p-4 rounded-2xl [font-family:var(--font-marketing-display)] text-lg font-medium transition-colors ${
+                  pathname === link.path
+                    ? 'bg-slate-100 text-slate-900'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                {link.name}
+              </Link>
+            ))}
+          </nav>
+          <div className="h-px bg-slate-100 w-full my-2" />
+          <div className="flex flex-col gap-2">
+            <Link 
+              href="/login" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-4 text-center rounded-2xl [font-family:var(--font-marketing-body)] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              Masuk
+            </Link>
+            <Link 
+              href="/signup" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-4 text-center rounded-2xl bg-slate-900 [font-family:var(--font-marketing-body)] font-medium text-white shadow-xl hover:bg-slate-800 transition-colors"
+            >
+              Daftar Gratis
+            </Link>
+          </div>
+        </div>
+      )}
+    </header>
+  );
 }

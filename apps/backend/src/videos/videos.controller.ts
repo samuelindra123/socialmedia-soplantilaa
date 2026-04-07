@@ -78,7 +78,8 @@ export class VideosController {
 
   @Post('resumable/sessions/:sessionId/complete')
   @ApiOperation({
-    summary: 'Selesaikan upload chunk, gabungkan file, lalu publikasikan video.',
+    summary:
+      'Selesaikan upload chunk, gabungkan file, lalu publikasikan video.',
   })
   completeResumableSession(
     @GetUser('id') userId: string,

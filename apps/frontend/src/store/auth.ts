@@ -40,8 +40,8 @@ export const useAuthStore = create<AuthState>()(
 
           set({
             user: result.user,
-            token: null,
-            sessionToken: null,
+            token: result.accessToken,
+            sessionToken: result.sessionToken,
             isAuthenticated: true,
             isLoading: false,
           });
@@ -74,8 +74,6 @@ export const useAuthStore = create<AuthState>()(
           const { data } = await apiClient.get<User>('/users/profile');
           set({
             user: data,
-            token: null,
-            sessionToken: null,
             isAuthenticated: true,
             isLoading: false
           });

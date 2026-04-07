@@ -103,10 +103,13 @@ export default function FeedPage() {
   }, []);
 
   useEffect(() => {
+    // Prevent redirect loop: only redirect if user is loaded and not currently loading
+    if (isAuthLoading) return;
+    if (!user) return;
     if (user && !isOnboardingDone) {
       router.replace('/onboarding');
     }
-  }, [user, isOnboardingDone, router]);
+  }, [user, isOnboardingDone, isAuthLoading, router]);
 
   // 1. FETCH FEED DATA
   const { 

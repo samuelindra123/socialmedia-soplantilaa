@@ -64,11 +64,11 @@ export default function Logo({
                 viewBox={viewBox}
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                aria-label={variant === 'icon' ? "Renunganku Logo" : "Renunganku"}
+                aria-label={variant === 'icon' ? "Soplantila Logo" : "Soplantila"}
                 role="img"
                 className="overflow-visible" // Allow glow to spill over
             >
-                <title>Renunganku</title>
+                <title>Soplantila</title>
 
                 {/* --- STYLES & DEFS --- */}
                 <defs>
@@ -111,22 +111,31 @@ export default function Logo({
                     `}</style>
                 </defs>
 
-                {/* --- LOGO SYMBOL: THE RADIANT CROSS --- */}
+                {/* --- LOGO SYMBOL: THE KINETIC PULSE --- */}
                 {(variant === 'icon' || variant === 'full') && (
                     <g id="logo-symbol">
-                        {/* Background Rays (Cahaya Ilahi) */}
-                        <path 
+                        {/* Outer Geometric Ring */}
+                        <circle
                             className="logo-rays"
-                            d="M16 2L19 10L28 12L20 18L21 28L16 22L11 28L12 18L4 12L13 10L16 2Z" 
-                            fill={colored ? "#A78BFA" : "currentColor"} 
-                            fillOpacity={colored ? "0.3" : "0.2"}
+                            cx="16" cy="16" r="14"
+                            stroke="var(--color-brand-primary)"
+                            strokeWidth="0.5"
+                            strokeOpacity="0.2"
+                            fill="none"
                         />
 
-                        {/* The Cross (Salib) */}
+                        {/* Connection Nodes (Marketing Group Vibe) */}
                         <path
                             className="logo-cross"
                             fill={fillValue}
-                            d="M13 6C13 4.34315 14.3431 3 16 3C17.6569 3 19 4.34315 19 6V11H24C25.6569 11 27 12.3431 27 14C27 15.6569 25.6569 17 24 17H19V26C19 27.6569 17.6569 29 16 29C14.3431 29 13 27.6569 13 26V17H8C6.34315 17 5 15.6569 5 14C5 12.3431 6.34315 11 8 11H13V6Z"
+                            d="M16 4C9.373 4 4 9.373 4 16s5.373 12 12 12 12-5.373 12-12S22.627 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zM14 16a2 2 0 114 0 2 2 0 01-4 0z"
+                        />
+                        
+                        {/* Pulse Dot */}
+                        <circle
+                            cx="26" cy="10" r="2"
+                            fill="var(--color-brand-accent)"
+                            className="animate-pulse"
                         />
                     </g>
                 )}
@@ -144,7 +153,7 @@ export default function Logo({
                         className="select-none"
                         style={{ fontFeatureSettings: '"cv11", "ss01"' }} // Optional: nicer font features if Inter is loaded
                     >
-                        Renunganku
+                        Soplantila
                     </text>
                 )}
             </svg>

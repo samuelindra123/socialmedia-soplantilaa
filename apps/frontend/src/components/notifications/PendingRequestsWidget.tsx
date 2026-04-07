@@ -164,7 +164,7 @@ export default function PendingRequestsWidget() {
                   <button
                     onClick={() => handleAction('accept', request.id)}
                     disabled={isProcessing}
-                    className="flex items-center justify-center h-6 w-6 rounded-full text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors disabled:opacity-50"
+                    className="flex items-center justify-center h-6 w-6 rounded-full text-slate-400 hover:text-emerald-500 hover:bg-indigo-50 dark:hover:bg-emerald-500/10 transition-colors disabled:opacity-50"
                     title="Terima"
                   >
                     {isProcessing && processing?.action === 'accept' ? (

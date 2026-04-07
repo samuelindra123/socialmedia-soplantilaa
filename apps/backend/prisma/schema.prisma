@@ -19,6 +19,8 @@ model User {
   resetPasswordOtp   String?
   resetPasswordOtpExpiry DateTime?
   googleId         String?   @unique
+  failedLoginAttempts Int                    @default(0)
+  accountLockedUntil DateTime?
   sessions         UserSession[]
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
@@ -40,6 +42,7 @@ model User {
   targetedBy        UserInteraction[]         @relation("TargetInteractions")
   interactions      UserInteraction[]         @relation("UserInteractions")
   videos            Video[]
+  emailLogs         EmailLog[]
 }
 
 model Video {
@@ -493,4 +496,38 @@ enum BlogPostStatus {
   DRAFT
   SCHEDULED
   PUBLISHED
+}
+
+enum EmailType {
+  WELCOME
+  OTP_VERIFICATION
+  LOGIN_NEW_DEVICE
+  PASSWORD_CHANGED
+  PASSWORD_RESET
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+  BOUNCED
+}
+
+model EmailLog {
+  id        String      @id @default(uuid())
+  userId    String?
+  email     String
+  type      EmailType
+  subject   String
+  status    EmailStatus @default(PENDING)
+  error     String?
+  sentAt    DateTime?
+  createdAt DateTime    @default(now())
+
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
 }

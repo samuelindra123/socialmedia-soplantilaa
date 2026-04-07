@@ -333,13 +333,13 @@ export default function StoryViewer({
   const mediaUrl = normalizeMediaUrl(currentStory.mediaUrl);
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black overflow-y-auto">
+    <div className="fixed inset-0 z-[200] bg-slate-900 overflow-y-auto">
       {/* Full screen container */}
       <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
         {/* Close button - fixed position */}
         <button
           onClick={onClose}
-          className="fixed top-4 right-4 z-[210] p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
+          className="fixed top-4 right-4 z-[210] p-2 bg-slate-900/50 hover:bg-slate-900/70 rounded-full transition-colors"
         >
           <X className="w-6 h-6 text-white" />
         </button>
@@ -348,7 +348,7 @@ export default function StoryViewer({
         {(currentGroupIndex > 0 || currentStoryIndex > 0) && (
           <button
             onClick={goPrev}
-            className="hidden sm:flex fixed left-4 top-1/2 -translate-y-1/2 z-[210] p-3 bg-black/50 hover:bg-black/70 rounded-full transition-colors items-center justify-center"
+            className="hidden sm:flex fixed left-4 top-1/2 -translate-y-1/2 z-[210] p-3 bg-slate-900/50 hover:bg-slate-900/70 rounded-full transition-colors items-center justify-center"
           >
             <ChevronLeft className="w-6 h-6 text-white" />
           </button>
@@ -358,14 +358,14 @@ export default function StoryViewer({
           currentStoryIndex < currentGroup.stories.length - 1) && (
           <button
             onClick={goNext}
-            className="hidden sm:flex fixed right-4 top-1/2 -translate-y-1/2 z-[210] p-3 bg-black/50 hover:bg-black/70 rounded-full transition-colors items-center justify-center"
+            className="hidden sm:flex fixed right-4 top-1/2 -translate-y-1/2 z-[210] p-3 bg-slate-900/50 hover:bg-slate-900/70 rounded-full transition-colors items-center justify-center"
           >
             <ChevronRight className="w-6 h-6 text-white" />
           </button>
         )}
 
         {/* Story container - responsive */}
-        <div className="relative w-full sm:w-auto sm:max-w-md h-[100dvh] sm:h-[90vh] bg-black sm:rounded-2xl overflow-hidden">
+        <div className="relative w-full sm:w-auto sm:max-w-md h-[100dvh] sm:h-[90vh] bg-slate-900 sm:rounded-2xl overflow-hidden">
           {/* Progress bars - smoother animation */}
           <div className="absolute top-0 left-0 right-0 z-30 flex gap-1 p-3 pt-4 safe-area-inset-top">
             {currentGroup.stories.map((story, index) => (
@@ -465,14 +465,14 @@ export default function StoryViewer({
 
           {/* Buffering indicator - minimal like feed */}
           {isBuffering && currentStory.type === "VIDEO" && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20">
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/20">
               <div className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full animate-spin" />
             </div>
           )}
 
           {/* Error state */}
           {hasMediaError && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/90 gap-4">
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/90 gap-4">
               <AlertCircle className="w-12 h-12 text-red-400" />
               <p className="text-white/80 text-sm text-center px-4">
                 Gagal memuat {currentStory.type === "VIDEO" ? "video" : "gambar"}

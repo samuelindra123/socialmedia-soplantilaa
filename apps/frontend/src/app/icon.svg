@@ -1,18 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <defs>
-    <linearGradient id="crossGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366F1" />
-      <stop offset="50%" stop-color="#8B5CF6" />
-      <stop offset="100%" stop-color="#EC4899" />
-    </linearGradient>
-  </defs>
-  <path
-    d="M16 2L19 10L28 12L20 18L21 28L16 22L11 28L12 18L4 12L13 10L16 2Z"
-    fill="#A78BFA"
-    fill-opacity="0.3"
-  />
-  <path
-    d="M13 6C13 4.34315 14.3431 3 16 3C17.6569 3 19 4.34315 19 6V11H24C25.6569 11 27 12.3431 27 14C27 15.6569 25.6569 17 24 17H19V26C19 27.6569 17.6569 29 16 29C14.3431 29 13 27.6569 13 26V17H8C6.34315 17 5 15.6569 5 14C5 12.3431 6.34315 11 8 11H13V6Z"
-    fill="url(#crossGradient)"
-  />
+  <!-- slate-900 background #0f172a -->
+  <rect width="32" height="32" rx="8" fill="#0f172a" />
+  
+  <!-- translated leaf path to center it in 32x32 viewbox (original leaf is 24x24) -->
+  <g transform="translate(4, 4)">
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
 </svg>

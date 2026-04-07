@@ -61,7 +61,7 @@ function VideoPreview({ url }: { url: string }) {
       />
       <button
         onClick={(e) => { e.stopPropagation(); if (!ref.current) return; ref.current.muted = !muted; setMuted(!muted); }}
-        className="absolute bottom-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white backdrop-blur-sm"
+        className="absolute bottom-2 right-2 p-2 bg-slate-900/50 hover:bg-slate-900/70 rounded-full text-white backdrop-blur-sm"
         aria-label="Toggle mute"
       >
         {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -508,7 +508,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-700">
@@ -527,7 +527,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
             onClick={() => setActiveTab('text')}
             className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
               activeTab === 'text' 
-                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20' 
+                ? 'text-emerald-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20' 
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700'
             }`}
           >
@@ -538,7 +538,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
             onClick={() => setActiveTab('image')}
             className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
               activeTab === 'image' 
-                ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-600 dark:border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20' 
+                ? 'text-emerald-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20' 
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700'
             }`}
           >
@@ -566,7 +566,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
               {user?.profile?.profileImageUrl ? (
                 <img src={user.profile.profileImageUrl} alt={user.profile.username} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold text-xs">
+                <div className="w-full h-full flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/30 text-emerald-600 dark:text-indigo-400 font-bold text-xs">
                   {(user?.profile?.username || user?.namaLengkap || "U").charAt(0).toUpperCase()}
                 </div>
               )}
@@ -627,7 +627,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Judul Postingan"
-                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:focus:border-emerald-400"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:focus:border-indigo-400"
                 />
                 
                 <textarea 
@@ -635,7 +635,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
                   onChange={(e) => handleDescriptionChange(e.target.value)}
                   placeholder="Deskripsi gambar..."
                   rows={3}
-                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:focus:border-emerald-400"
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:focus:border-indigo-400"
                 />
                 <div className="text-right text-xs text-slate-500 dark:text-slate-400">
                   {descriptionWordCount.toLocaleString('id-ID')} / {MAX_WORDS_LABEL} kata
@@ -645,9 +645,9 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
                 <div className="relative">
                   <div className="flex flex-wrap gap-2 p-2 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl min-h-[42px]">
                     {tags.map(tag => (
-                      <span key={tag} className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs px-2 py-1 rounded-lg flex items-center gap-1">
+                      <span key={tag} className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs px-2 py-1 rounded-lg flex items-center gap-1">
                         #{tag}
-                        <button onClick={() => removeTag(tag)} className="hover:text-emerald-900 dark:hover:text-emerald-200"><X className="w-3 h-3" /></button>
+                        <button onClick={() => removeTag(tag)} className="hover:text-indigo-900 dark:hover:text-indigo-200"><X className="w-3 h-3" /></button>
                       </span>
                     ))}
                     <input 
@@ -674,7 +674,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
                       <img src={url} alt="Preview" className="w-full h-full object-cover" />
                       <button 
                         onClick={() => removeImage(idx)} 
-                        className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1 right-1 p-1 bg-slate-900/50 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -682,7 +682,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
                   ))}
                   <button 
                     onClick={() => imageInputRef.current?.click()} 
-                    className="aspect-square rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:text-emerald-600 transition-colors"
+                    className="aspect-square rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:text-emerald-600 transition-colors"
                   >
                     <ImageIcon className="w-6 h-6 mb-1" />
                     <span className="text-xs font-medium">Upload</span>
@@ -751,15 +751,15 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
                 </div>
                 
                 {videoPreview ? (
-                  <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 group">
+                  <div className="relative aspect-video bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 group">
                     <VideoPreview url={videoPreview} />
                     <button 
                       onClick={removeVideo} 
-                      className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                      className="absolute top-2 right-2 p-2 bg-slate-900/50 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <X className="w-4 h-4" />
                     </button>
-                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded-lg backdrop-blur-sm max-w-[200px] truncate">
+                    <div className="absolute bottom-2 left-2 bg-slate-900/60 text-white text-xs px-2 py-1 rounded-lg backdrop-blur-sm max-w-[200px] truncate">
                       {videoFile?.name}
                     </div>
                   </div>
@@ -797,7 +797,7 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
                     style={{ width: `${uploadProgress}%` }} 
                     className={`h-full transition-all duration-300 ${
                       activeTab === 'video' ? 'bg-purple-600' : 
-                      activeTab === 'image' ? 'bg-emerald-600' : 'bg-indigo-600'
+                      activeTab === 'image' ? 'bg-emerald-600' : 'bg-emerald-600'
                     }`}
                   />
                 </div>
@@ -816,8 +816,8 @@ export default function CreatePostModal({ isOpen, onClose }: CreatePostModalProp
               activeTab === 'video' 
                 ? 'bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed'
                 : activeTab === 'image'
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                ? 'bg-emerald-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                : 'bg-emerald-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed'
             }`}
           >
             {(isPostingText || isPostingImage || isPostingVideo) && (

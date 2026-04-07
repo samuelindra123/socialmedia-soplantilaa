@@ -150,7 +150,7 @@ export async function clearAuthCookiesAction(): Promise<{ ok: true }> {
 
 export async function loginAction(email: string, password: string): Promise<LoginResult> {
   const requestHeaders = await headers();
-  const userAgent = requestHeaders.get("user-agent") || "renunganku-web";
+  const userAgent = requestHeaders.get("user-agent") || "soplantila-web";
 
   const result = await requestJson<LoginResponse>(
     "/auth/login",
@@ -234,10 +234,16 @@ export async function verifyEmailTokenAction(token: string): Promise<LoginResult
 }
 
 export async function verifyEmailOtpAction(userId: string, otp: string): Promise<LoginResult> {
-  const result = await requestJson<{ message: string; accessToken: string }>(
+  const requestHeaders = await headers();
+  const userAgent = requestHeaders.get("user-agent") || "soplantila-web";
+
+  const result = await requestJson<LoginResponse>(
     `/auth/verify-otp/${encodeURIComponent(userId)}`,
     {
       method: "POST",
+      headers: {
+        "user-agent": userAgent,
+      },
       body: JSON.stringify({ otp }),
     },
     "Terjadi kesalahan saat verifikasi",
@@ -245,19 +251,13 @@ export async function verifyEmailOtpAction(userId: string, otp: string): Promise
 
   if (!result.ok) return result;
 
-  await setAuthCookies(result.data.accessToken, null);
+  await setAuthCookies(result.data.accessToken, result.data.session?.token ?? null);
 
   return {
     ok: true,
-    user: {
-      id: "",
-      email: "",
-      namaLengkap: "",
-      isEmailVerified: true,
-      createdAt: new Date().toISOString(),
-    },
+    user: result.data.user,
     accessToken: result.data.accessToken,
-    sessionToken: null,
+    sessionToken: result.data.session?.token ?? null,
   };
 }
 
@@ -346,7 +346,7 @@ export async function confirmGoogleAction(
   displayName: string,
 ): Promise<LoginResult> {
   const requestHeaders = await headers();
-  const userAgent = requestHeaders.get("user-agent") || "renunganku-web";
+  const userAgent = requestHeaders.get("user-agent") || "soplantila-web";
 
   const result = await requestJson<LoginResponse>(
     "/auth/google/confirm",

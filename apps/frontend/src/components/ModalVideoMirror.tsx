@@ -85,10 +85,10 @@ export default function ModalVideoMirror({ postId, src, poster, className = "", 
     : "w-full h-full object-cover";
 
   return (
-    <div className={`relative bg-black flex items-center justify-center ${className}`} onMouseMove={showControlsTemporarily}>
+    <div className={`relative bg-slate-900 flex items-center justify-center ${className}`} onMouseMove={showControlsTemporarily}>
       <video ref={videoRef} src={src} poster={poster} className={videoFitClass} playsInline preload="metadata" muted />
       <div className="absolute inset-0 flex items-center justify-center cursor-pointer" onClick={() => togglePlayPause()}>
-        {!isPlaying && <div className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 hover:bg-black/70 transition-all hover:scale-110 shadow-2xl"><Play className="w-8 h-8 text-white fill-white ml-1" /></div>}
+        {!isPlaying && <div className="w-20 h-20 rounded-full bg-slate-900/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 hover:bg-slate-900/70 transition-all hover:scale-110 shadow-2xl"><Play className="w-8 h-8 text-white fill-white ml-1" /></div>}
       </div>
       <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-16 pb-4 px-4 transition-opacity ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className="w-full h-1 bg-white/30 rounded-full mb-4 cursor-pointer hover:h-2 transition-all" onClick={onProgressClick}>
@@ -106,7 +106,7 @@ export default function ModalVideoMirror({ postId, src, poster, className = "", 
             </button>
             <span className="text-xs text-white/90 tabular-nums ml-1">{formatTime(currentTime)} / {formatTime(duration)}</span>
           </div>
-          <div className="bg-black/60 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full">Mirror</div>
+          <div className="bg-slate-900/60 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full">Mirror</div>
         </div>
       </div>
     </div>

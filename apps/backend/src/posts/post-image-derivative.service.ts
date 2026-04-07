@@ -24,7 +24,10 @@ export class PostImageDerivativeService {
     file?: Express.Multer.File;
   }): Promise<ProcessedPostImageAsset> {
     try {
-      const sourceBuffer = await this.resolveSourceBuffer(input.url, input.file);
+      const sourceBuffer = await this.resolveSourceBuffer(
+        input.url,
+        input.file,
+      );
 
       const sourceMeta = await sharp(sourceBuffer, { failOn: 'none' })
         .rotate()
@@ -32,13 +35,21 @@ export class PostImageDerivativeService {
 
       const thumbnailBuffer = await sharp(sourceBuffer, { failOn: 'none' })
         .rotate()
-        .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
+        .resize({
+          width: 640,
+          height: 640,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
         .webp({ quality: 70 })
         .toBuffer();
 
       const thumbMeta = await sharp(thumbnailBuffer).metadata();
       const blurhash = await this.generateBlurhash(sourceBuffer);
-      const thumbnailUrl = await this.uploadThumbnail(thumbnailBuffer, input.url);
+      const thumbnailUrl = await this.uploadThumbnail(
+        thumbnailBuffer,
+        input.url,
+      );
 
       return {
         url: input.url,
@@ -89,7 +100,12 @@ export class PostImageDerivativeService {
   private async generateBlurhash(sourceBuffer: Buffer) {
     const raw = await sharp(sourceBuffer, { failOn: 'none' })
       .rotate()
-      .resize({ width: 32, height: 32, fit: 'inside', withoutEnlargement: true })
+      .resize({
+        width: 32,
+        height: 32,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });

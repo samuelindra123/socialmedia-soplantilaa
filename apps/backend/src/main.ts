@@ -1,13 +1,23 @@
 import { NestFactory } from '@nestjs/core';
+import {
+  ExpressAdapter,
+  NestExpressApplication,
+} from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
 import * as express from 'express';
 import { join } from 'path';
+import * as classValidator from 'class-validator';
+import * as classTransformer from 'class-transformer';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Provide adapter explicitly to avoid module-resolution issues in monorepo installs.
+  const app = await NestFactory.create<NestExpressApplication>(
+    AppModule,
+    new ExpressAdapter(),
+  );
 
   // Increase body size limit for video uploads (100MB)
   app.use(json({ limit: '100mb' }));
@@ -22,6 +32,8 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      validatorPackage: classValidator,
+      transformerPackage: classTransformer,
     }),
   );
 

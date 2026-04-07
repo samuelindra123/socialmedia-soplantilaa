@@ -7,7 +7,8 @@ export class MailService {
 
   private getResendFrom(): string {
     const fromName = process.env.RESEND_FROM_NAME?.trim() || 'Renunganku';
-    const fromEmail = process.env.RESEND_FROM_EMAIL?.trim() || 'noreply@example.com';
+    const fromEmail =
+      process.env.RESEND_FROM_EMAIL?.trim() || 'noreply@example.com';
 
     return `${fromName} <${fromEmail}>`;
   }

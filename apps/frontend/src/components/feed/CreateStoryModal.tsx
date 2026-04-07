@@ -423,7 +423,7 @@ export default function CreateStoryModal({
   const currentMedia = mediaFiles[currentPreviewIndex];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
@@ -492,7 +492,7 @@ export default function CreateStoryModal({
             // Preview
             <div className="space-y-4">
               {/* Main Preview */}
-              <div className="relative aspect-[9/16] max-h-[40vh] bg-black rounded-xl overflow-hidden mx-auto">
+              <div className="relative aspect-[9/16] max-h-[40vh] bg-slate-900 rounded-xl overflow-hidden mx-auto">
                 {currentMedia?.type === "VIDEO" ? (
                   <video
                     key={currentMedia.id}
@@ -515,7 +515,7 @@ export default function CreateStoryModal({
 
                 {/* Upload progress overlay */}
                 {isUploading && (
-                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-4 p-4">
+                  <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center gap-4 p-4">
                     {uploadStage === "creating" ? (
                       <>
                         <Loader2 className="w-12 h-12 text-white animate-spin" />
@@ -594,13 +594,13 @@ export default function CreateStoryModal({
                       />
                     )}
                     {mf.type === "VIDEO" && (
-                      <div className="absolute bottom-0.5 right-0.5 bg-black/70 rounded px-1">
+                      <div className="absolute bottom-0.5 right-0.5 bg-slate-900/70 rounded px-1">
                         <Video className="w-3 h-3 text-white" />
                       </div>
                     )}
                     {/* Upload status indicator */}
                     {mf.uploadStatus === "uploading" && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center">
                         <div className="w-8 h-8 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                       </div>
                     )}

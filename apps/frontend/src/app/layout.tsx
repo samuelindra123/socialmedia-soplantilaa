@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Renunganku - Platform Refleksi Digital",
-  description: "Ruang digital yang tenang untuk pikiran Anda",
+  title: "Soplantila - Mindful Connection",
+  description: "A modern digital space for your thoughts, community, and personal growth",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",

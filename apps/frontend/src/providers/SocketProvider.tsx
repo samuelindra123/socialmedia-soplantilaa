@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useUploadTaskStore } from '@/store/uploadTasks';
 
@@ -35,13 +36,59 @@ const SocketContext = createContext<SocketContextType>({
   isConnected: false,
 });
 
+const PUBLIC_ROUTES = [
+  '/',
+  '/login',
+  '/signup',
+  '/verify',
+  '/forgot-password',
+  '/privacy',
+  '/terms',
+  '/manifesto',
+  '/roadmap',
+  '/changelog',
+  '/early-access',
+  '/pricing',
+  '/features',
+  '/cookies',
+  '/blog',
+  '/post',
+  '/oauth/callback',
+  '/oauth/consent',
+];
+
+const PREFIX_ROUTES = ['/blog', '/features', '/pricing', '/post', '/forgot-password'];
+
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some((route) => {
+    if (PREFIX_ROUTES.includes(route)) {
+      return pathname === route || pathname.startsWith(`${route}/`);
+    }
+    return pathname === route;
+  });
+}
+
 export function SocketProvider({ children }: { children: ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const pathname = usePathname();
   const { user } = useAuthStore();
   const applyUploadStatus = useUploadTaskStore((state) => state.applyServerStatus);
+  const socketEnabled = !isPublicRoute(pathname);
 
   useEffect(() => {
+    if (!socketEnabled) {
+      setIsConnected(false);
+      setSocket((prevSocket) => {
+        if (prevSocket) {
+          prevSocket.emit('leave-feed');
+          prevSocket.disconnect();
+        }
+        return null;
+      });
+      return;
+    }
+
     const raw = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     const baseUrl =
       typeof window !== 'undefined' && window.location.protocol === 'https:'
@@ -83,7 +130,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       socketInstance.emit('leave-feed');
       socketInstance.disconnect();
     };
-  }, []);
+  }, [socketEnabled, user?.id]);
 
   // Re-join user room when user changes
   useEffect(() => {

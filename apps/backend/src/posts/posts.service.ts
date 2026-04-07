@@ -269,11 +269,14 @@ export class PostsService {
 
     const mediaType = dto.mediaType || 'image';
     const invalidUrl = dto.mediaUrls.find(
-      (url) => !url || (!url.startsWith('http://') && !url.startsWith('https://')),
+      (url) =>
+        !url || (!url.startsWith('http://') && !url.startsWith('https://')),
     );
 
     if (invalidUrl) {
-      throw new BadRequestException('Semua mediaUrl harus URL absolut yang valid');
+      throw new BadRequestException(
+        'Semua mediaUrl harus URL absolut yang valid',
+      );
     }
 
     return this.createPost(

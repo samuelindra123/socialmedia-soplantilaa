@@ -6,6 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcrypt';
 import type {
   User as PrismaUser,
@@ -29,6 +30,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mailService: MailService,
+    private emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -103,9 +105,10 @@ export class AuthService {
     };
   }
 
-  async verifyEmailByOtp(userId: string, otp: string) {
+  async verifyEmailByOtp(userId: string, otp: string, meta: SessionMeta = {}) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: { profile: true },
     });
 
     if (!user) {
@@ -124,7 +127,7 @@ export class AuthService {
       throw new BadRequestException('OTP sudah expired');
     }
 
-    await this.prisma.user.update({
+    const updatedUser = (await this.prisma.user.update({
       where: { id: user.id },
       data: {
         isEmailVerified: true,
@@ -132,12 +135,17 @@ export class AuthService {
         verificationOtp: null,
         otpExpiry: null,
       },
-    });
+      include: { profile: true },
+    })) as UserWithProfile;
 
-    return {
-      message: 'Email berhasil diverifikasi!',
-      accessToken: await this.generateAccessToken(user.id),
-    };
+    // Send welcome email after successful verification
+    void this.emailService.sendWelcomeEmail(
+      updatedUser.id,
+      updatedUser.email,
+      updatedUser.namaLengkap,
+    );
+
+    return this.buildAuthResponse(updatedUser, meta);
   }
 
   async resendVerification(email: string) {
@@ -265,6 +273,13 @@ export class AuthService {
       },
     });
 
+    // Send password changed email
+    void this.emailService.sendPasswordChangedEmail(
+      user.id,
+      user.email,
+      new Date(),
+    );
+
     return { message: 'Password berhasil diperbarui, silakan login kembali' };
   }
 
@@ -278,14 +293,82 @@ export class AuthService {
       throw new UnauthorizedException('Email atau password salah');
     }
 
+    // Check if account is locked
+    if (user.accountLockedUntil && new Date() < user.accountLockedUntil) {
+      const minutesLeft = Math.ceil(
+        (user.accountLockedUntil.getTime() - Date.now()) / 60000,
+      );
+      throw new UnauthorizedException(
+        `Akun terkunci karena terlalu banyak percobaan login gagal. Coba lagi dalam ${minutesLeft} menit.`,
+      );
+    }
+
+    // Reset lockout if time has passed
+    if (user.accountLockedUntil && new Date() >= user.accountLockedUntil) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: 0,
+          accountLockedUntil: null,
+        },
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Email atau password salah');
+      // Increment failed attempts
+      const newFailedAttempts = (user.failedLoginAttempts || 0) + 1;
+      const maxAttempts = 5;
+      const lockoutMinutes = 15;
+
+      if (newFailedAttempts >= maxAttempts) {
+        // Lock account for 15 minutes
+        const lockUntil = new Date(Date.now() + lockoutMinutes * 60000);
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: newFailedAttempts,
+            accountLockedUntil: lockUntil,
+          },
+        });
+
+        // Send account locked email
+        void this.emailService.sendAccountLockedEmail(
+          user.id,
+          user.email,
+          lockUntil,
+        );
+
+        throw new UnauthorizedException(
+          `Terlalu banyak percobaan login gagal. Akun dikunci selama ${lockoutMinutes} menit.`,
+        );
+      }
+
+      // Update failed attempts
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: newFailedAttempts },
+      });
+
+      throw new UnauthorizedException(
+        `Email atau password salah. ${maxAttempts - newFailedAttempts} percobaan tersisa.`,
+      );
     }
 
     if (!user.isEmailVerified) {
       throw new UnauthorizedException('Email belum terverifikasi');
+    }
+
+    // Reset failed attempts on successful login
+    if (user.failedLoginAttempts > 0) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: 0,
+          accountLockedUntil: null,
+        },
+      });
     }
 
     return this.buildAuthResponse(user, meta);
@@ -423,10 +506,11 @@ export class AuthService {
         isEmailVerified: true,
         profile: {
           create: {
-            username: `${displayName?.split(' ')[0] || 'user'}-${Date.now()}`,
+            username: `temp_${displayName?.split(' ')[0]?.toLowerCase() || 'user'}_${Date.now()}`,
             tanggalLahir: new Date(),
             umur: 18,
             tempatKelahiran: 'Indonesia',
+            isOnboardingComplete: false,
           },
         },
       },
