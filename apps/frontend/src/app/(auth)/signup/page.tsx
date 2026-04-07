@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import GoogleLogo from "@/components/auth/GoogleLogo";
 import { registerAction } from "@/app/actions/auth-actions";
+import MaintenanceAuthGuard from "@/components/MaintenanceAuthGuard";
 
 const signupSchema = z.object({
   fullName: z.string().min(3, "Nama lengkap minimal 3 karakter"),
@@ -195,7 +196,7 @@ export default function SignupPage() {
             )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-              
+              <MaintenanceAuthGuard action="signup">
               <div className="space-y-1">
                 <input 
                   {...register("fullName")}
@@ -289,6 +290,7 @@ export default function SignupPage() {
                 )}
                 Daftar dengan Google
               </button>
+              </MaintenanceAuthGuard>
             </form>
           </div>
 

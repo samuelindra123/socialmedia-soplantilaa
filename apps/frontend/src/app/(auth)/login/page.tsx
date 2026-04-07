@@ -18,6 +18,7 @@ import {
 import { useAuthStore } from "@/store/auth"; 
 import GoogleLogo from "@/components/auth/GoogleLogo";
 import { loginAction } from "@/app/actions/auth-actions";
+import MaintenanceAuthGuard from "@/components/MaintenanceAuthGuard";
 
 const loginSchema = z.object({
   email: z.string().email("Format email tidak valid"),
@@ -176,6 +177,7 @@ export default function LoginPage() {
             )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <MaintenanceAuthGuard action="login">
               
               <div className="space-y-1">
                 <div className="relative">
@@ -248,6 +250,7 @@ export default function LoginPage() {
                 )}
                 Masuk dengan Google
               </button>
+              </MaintenanceAuthGuard>
             </form>
           </div>
 

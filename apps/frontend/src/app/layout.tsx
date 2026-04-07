@@ -6,6 +6,7 @@ import ToastProvider from "@/providers/toast-provider";
 import { SocketProvider } from "@/providers/SocketProvider";
 import GlobalUploadStatus from "@/components/uploads/GlobalUploadStatus";
 import MaintenanceBanner from "@/components/MaintenanceBanner";
+import { MaintenanceProvider } from "@/providers/maintenance-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,14 +35,16 @@ export default function RootLayout({
   return (
     <html lang="id" className="scroll-smooth">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <MaintenanceBanner />
-        <QueryProvider>
-          <SocketProvider>
-            {children}
-            <GlobalUploadStatus />
-            <ToastProvider />
-          </SocketProvider>
-        </QueryProvider>
+        <MaintenanceProvider>
+          <MaintenanceBanner />
+          <QueryProvider>
+            <SocketProvider>
+              {children}
+              <GlobalUploadStatus />
+              <ToastProvider />
+            </SocketProvider>
+          </QueryProvider>
+        </MaintenanceProvider>
       </body>
     </html>
   );
