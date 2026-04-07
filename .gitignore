@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment files (JANGAN PERNAH COMMIT!)
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Prisma
+apps/backend/prisma/data-alkitab-ayt/
+
+# Uploads
+apps/backend/uploads/
+
+# Test coverage
+coverage/
+
+# Misc
+*.py
+patch_*.py
+rewrite_*.py
+
+# Admin env
+admin/backend/.env
+admin/frontend/.env
