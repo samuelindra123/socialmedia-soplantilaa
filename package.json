@@ -6,7 +6,6 @@
     "apps/*"
   ],
   "scripts": {
-    "postinstall": "npm install --prefix apps/backend",
     "dev:backend": "npm run start:dev --prefix apps/backend",
     "dev:frontend": "npm run dev --prefix apps/frontend",
     "build": "npm run build:backend",
