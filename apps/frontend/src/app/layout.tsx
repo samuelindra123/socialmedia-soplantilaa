@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Soplantila - Mindful Connection",
-  description: "A modern digital space for your thoughts, community, and personal growth",
+  title: "Soplantila - Platform Sosial Media Indonesia",
+  description: "Soplantila adalah platform sosial media untuk berbagi konten, terhubung dengan teman, dan membangun komunitas. Login dengan Google untuk akses cepat.",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",

@@ -287,6 +287,32 @@ export default function Home() {
             </Link>
           </div>
         </section>
+
+        {/* GOOGLE OAUTH DISCLOSURE — required for Google OAuth verification */}
+        <section className="py-16 px-6 lg:px-8 bg-slate-50 border-t border-slate-200">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="[font-family:var(--font-marketing-display)] text-2xl font-bold text-slate-900 mb-4">
+              Tentang Soplantila & Penggunaan Akun Google
+            </h2>
+            <p className="[font-family:var(--font-marketing-body)] text-slate-600 mb-6 leading-relaxed">
+              Soplantila adalah <strong>platform sosial media</strong> yang memungkinkan pengguna untuk membuat akun, berbagi postingan, mengikuti pengguna lain, berinteraksi melalui komentar dan likes, serta berkomunikasi melalui pesan langsung.
+            </p>
+            <div className="space-y-4 text-sm text-slate-600 [font-family:var(--font-marketing-body)]">
+              <div className="p-4 bg-white rounded-xl border border-slate-200">
+                <p className="font-semibold text-slate-800 mb-1">Mengapa kami meminta akses Google?</p>
+                <p>Soplantila menawarkan opsi <strong>Login dengan Google</strong> sebagai cara mudah untuk membuat atau masuk ke akun. Kami hanya meminta akses ke <strong>nama, alamat email, dan foto profil</strong> dari akun Google kamu — tidak lebih.</p>
+              </div>
+              <div className="p-4 bg-white rounded-xl border border-slate-200">
+                <p className="font-semibold text-slate-800 mb-1">Data apa yang kami gunakan?</p>
+                <p>Data dari Google hanya digunakan untuk membuat profil akun Soplantila kamu. Kami <strong>tidak menyimpan password Google</strong>, tidak mengakses email kamu, dan tidak membagikan data ke pihak ketiga untuk tujuan iklan.</p>
+              </div>
+              <div className="p-4 bg-white rounded-xl border border-slate-200">
+                <p className="font-semibold text-slate-800 mb-1">Keamanan & Privasi</p>
+                <p>Penggunaan data Google kami sesuai dengan <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-slate-900 underline">Google API Services User Data Policy</a>, termasuk persyaratan Limited Use. Baca <Link href="/privacy" className="text-slate-900 underline">Kebijakan Privasi</Link> kami untuk detail lengkap.</p>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       <Footer />
