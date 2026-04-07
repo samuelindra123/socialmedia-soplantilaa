@@ -40,9 +40,10 @@ export default function Header() {
 
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${displayFont.variable} ${bodyFont.variable} ${
+      className={`fixed left-0 right-0 z-50 transition-all duration-300 ${displayFont.variable} ${bodyFont.variable} ${
         isScrolled ? 'py-3' : 'py-5'
       }`}
+      style={{ top: 'var(--banner-height, 0px)' }}
     >
       <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
         <div className={`relative flex items-center justify-between rounded-full border transition-all duration-300 overflow-hidden ${
