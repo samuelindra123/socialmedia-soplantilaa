@@ -51,7 +51,7 @@ function ForgotPasswordOtpContent() {
       const result = await forgotPasswordVerifyOtpAction(email, otp);
       if (!result.ok) throw new Error(result.message);
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("reset_token", result.token || "");
+        sessionStorage.setItem("reset_token", result.resetToken || "");
       }
       toast.success("OTP valid!");
       router.push("/forgot-password/new-password");
@@ -161,7 +161,7 @@ function ForgotPasswordOtpContent() {
                 {otpValues.map((val, idx) => (
                   <input
                     key={idx}
-                    ref={(el) => (inputsRef.current[idx] = el)}
+                    ref={(el) => { inputsRef.current[idx] = el; }}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
