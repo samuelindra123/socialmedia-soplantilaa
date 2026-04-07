@@ -1,5 +1,4 @@
 {
-  "rootDirectory": "apps/frontend",
   "functions": {
     "src/app/api/proxy/[...path]/route.ts": {
       "maxDuration": 30
