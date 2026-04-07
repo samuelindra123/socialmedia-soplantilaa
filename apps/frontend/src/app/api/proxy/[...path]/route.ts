@@ -5,7 +5,7 @@ import {
   INTERNAL_API_TOKEN_HEADER,
 } from "@/lib/server/internal-api-token";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 function buildTargetUrl(request: NextRequest, path: string[]): string {
