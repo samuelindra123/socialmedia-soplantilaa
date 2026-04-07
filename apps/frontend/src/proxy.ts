@@ -18,6 +18,7 @@ const publicRoutes = [
   '/cookies',
   '/blog',
   '/post',
+  '/status',
   '/oauth/callback',
   '/oauth/consent',
 ];
