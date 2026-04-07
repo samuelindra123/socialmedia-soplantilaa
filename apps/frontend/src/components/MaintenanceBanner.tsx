@@ -51,9 +51,10 @@ function MaintenanceUI({ showPopup }: { showPopup: boolean }) {
           <Wrench className="w-4 h-4 shrink-0 animate-pulse" />
           <p className="text-xs sm:text-sm font-medium text-center leading-snug">
             <span className="font-bold">🚧 Maintenance Aktif</span>
-            {' — '}Server Soplantila sedang dalam perbaikan & pengembangan oleh tim{' '}
+            {' — '}Server sedang dalam perbaikan oleh tim{' '}
             <span className="font-bold underline underline-offset-2">samuelindrabastian</span>.
-            {' '}Login & fitur sosial <span className="font-bold">tidak dapat diakses</span> sementara.
+            {' '}Login & fitur sosial <span className="font-bold">tidak dapat diakses</span>.{' '}
+            <a href="/status" className="underline font-bold hover:opacity-80">Cek Status →</a>
           </p>
         </div>
       </div>
@@ -120,7 +121,7 @@ function MaintenanceUI({ showPopup }: { showPopup: boolean }) {
               <div className="pt-2 border-t border-slate-100 text-xs text-slate-400 text-center">
                 Dikembangkan dengan ❤️ oleh{' '}
                 <a
-                  href="https://github.com/samuelindrabastian"
+                  href="https://www.samuelindrabastian.me/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-slate-600 font-semibold hover:text-slate-900 inline-flex items-center gap-1"
@@ -138,9 +139,14 @@ function MaintenanceUI({ showPopup }: { showPopup: boolean }) {
               >
                 Mengerti, Tutup Notifikasi
               </button>
-              <p className="text-center text-xs text-slate-400 mt-2">
-                Banner di atas akan tetap tampil selama server belum pulih
-              </p>
+              <div className="flex items-center justify-between mt-2 gap-2">
+                <p className="text-xs text-slate-400">
+                  Refresh halaman jika server sudah pulih
+                </p>
+                <a href="/status" className="text-xs text-slate-600 font-medium hover:text-slate-900 underline underline-offset-2 shrink-0">
+                  Lihat Status →
+                </a>
+              </div>
             </div>
           </div>
         </div>
