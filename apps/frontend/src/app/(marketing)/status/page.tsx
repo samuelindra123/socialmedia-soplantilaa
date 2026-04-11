@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CheckCircle, XCircle, Clock, RefreshCw, Wifi, Database, Server, Globe, Activity } from 'lucide-react';
 import Link from 'next/link';
 
@@ -25,6 +25,14 @@ const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; 
   degraded: { label: 'Performa Menurun', color: 'text-amber-700', bg: 'bg-amber-50', dot: 'bg-amber-500 animate-pulse' },
 };
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && (
+    error.name === 'AbortError' ||
+    error.message.includes('aborted') ||
+    error.message.includes('ECONNRESET')
+  );
+}
+
 export default function StatusPage() {
   const [services, setServices] = useState<ServiceStatus[]>([
     { name: 'API Server', description: 'Backend utama & autentikasi', icon: <Server className="w-5 h-5" />, status: 'checking' },
@@ -35,57 +43,85 @@ export default function StatusPage() {
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [countdown, setCountdown] = useState(30);
+  const activeRequestRef = useRef<AbortController | null>(null);
 
   const checkStatus = useCallback(async () => {
+    activeRequestRef.current?.abort();
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+    activeRequestRef.current = controller;
+
     setIsRefreshing(true);
     const now = new Date();
 
-    // Check API server
-    let apiStatus: Status = 'down';
-    let apiLatency: number | undefined;
     try {
-      const start = Date.now();
-      const res = await fetch('/api/proxy/system-status', {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(5000),
-      });
-      apiLatency = Date.now() - start;
-      if (res.ok) {
-        apiStatus = apiLatency > 2000 ? 'degraded' : 'up';
+      // Check API server
+      let apiStatus: Status = 'down';
+      let apiLatency: number | undefined;
+      try {
+        const start = Date.now();
+        const res = await fetch('/api/proxy/system-status', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        apiLatency = Date.now() - start;
+        if (res.ok) {
+          apiStatus = apiLatency > 2000 ? 'degraded' : 'up';
+        }
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+
+        apiStatus = 'down';
       }
-    } catch { apiStatus = 'down'; }
 
-    // DB & realtime status derived from API response
-    let dbStatus: Status = apiStatus === 'up' ? 'up' : 'down';
-    let realtimeStatus: Status = apiStatus === 'up' ? 'up' : 'down';
+      // DB & realtime status derived from API response
+      const dbStatus: Status = apiStatus === 'up' ? 'up' : 'down';
+      const realtimeStatus: Status = apiStatus === 'up' ? 'up' : 'down';
 
-    // Check CDN
-    let cdnStatus: Status = 'down';
-    try {
-      const start = Date.now();
-      await fetch('https://renunganku.sgp1.cdn.digitaloceanspaces.com/', {
-        mode: 'no-cors',
-        signal: AbortSignal.timeout(4000),
-      });
-      cdnStatus = Date.now() - start > 2000 ? 'degraded' : 'up';
-    } catch { cdnStatus = 'down'; }
+      // Check CDN (Appwrite Storage)
+      let cdnStatus: Status = 'down';
+      try {
+        const start = Date.now();
+        await fetch('https://sgp.cloud.appwrite.io/v1/health', {
+          signal: controller.signal,
+        });
+        cdnStatus = Date.now() - start > 2000 ? 'degraded' : 'up';
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
 
-    setServices([
-      { name: 'API Server', description: 'Backend utama & autentikasi', icon: <Server className="w-5 h-5" />, status: apiStatus, latency: apiLatency, checkedAt: now },
-      { name: 'Database', description: 'PostgreSQL & penyimpanan data', icon: <Database className="w-5 h-5" />, status: dbStatus, checkedAt: now },
-      { name: 'CDN & Media', description: 'Upload foto & video', icon: <Globe className="w-5 h-5" />, status: cdnStatus, checkedAt: now },
-      { name: 'Realtime (WebSocket)', description: 'Notifikasi & chat langsung', icon: <Wifi className="w-5 h-5" />, status: realtimeStatus, checkedAt: now },
-    ]);
-    setLastChecked(now);
-    setIsRefreshing(false);
-    setCountdown(30);
+        cdnStatus = 'down';
+      }
+
+      setServices([
+        { name: 'API Server', description: 'Backend utama & autentikasi', icon: <Server className="w-5 h-5" />, status: apiStatus, latency: apiLatency, checkedAt: now },
+        { name: 'Database', description: 'PostgreSQL & penyimpanan data', icon: <Database className="w-5 h-5" />, status: dbStatus, checkedAt: now },
+        { name: 'CDN & Media', description: 'Upload foto & video', icon: <Globe className="w-5 h-5" />, status: cdnStatus, checkedAt: now },
+        { name: 'Realtime (WebSocket)', description: 'Notifikasi & chat langsung', icon: <Wifi className="w-5 h-5" />, status: realtimeStatus, checkedAt: now },
+      ]);
+      setLastChecked(now);
+      setCountdown(30);
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (activeRequestRef.current === controller) {
+        activeRequestRef.current = null;
+      }
+      setIsRefreshing(false);
+    }
   }, []);
 
   // Auto-check every 30s
   useEffect(() => {
     checkStatus();
     const interval = setInterval(checkStatus, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      activeRequestRef.current?.abort();
+      clearInterval(interval);
+    };
   }, [checkStatus]);
 
   // Countdown timer

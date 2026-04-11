@@ -28,7 +28,7 @@ function VerifyContent() {
   const email = searchParams.get("email");
 
   const [status, setStatus] = useState<'verifying' | 'success' | 'error' | 'idle'>('idle');
-  const [boxes, setBoxes] = useState<string[]>(Array(6).fill(""));
+  const [boxes, setBoxes] = useState<string[]>(Array(8).fill(""));
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -68,7 +68,7 @@ function VerifyContent() {
 
   useEffect(() => {
     const otp = boxes.join("");
-    if (otp.length === 6 && !isSubmitting) {
+    if (otp.length === 8 && !isSubmitting) {
       handleOtpSubmit(new Event('submit') as any);
     }
   }, [boxes]);
@@ -91,7 +91,7 @@ function VerifyContent() {
   const handleOtpSubmit = async (e: React.FormEvent) => {
     if (e) e.preventDefault();
     const otp = boxes.join("");
-    if (otp.length !== 6) return;
+    if (otp.length !== 8) return;
 
     setIsSubmitting(true);
     try {
@@ -113,7 +113,7 @@ function VerifyContent() {
       setTimeout(() => router.push('/onboarding'), 2000);
     } catch (error: any) {
       toast.error(error.message || "Kode OTP salah");
-      setBoxes(Array(6).fill(""));
+      setBoxes(Array(8).fill(""));
       inputsRef.current[0]?.focus();
     } finally {
       setIsSubmitting(false);
@@ -137,11 +137,11 @@ function VerifyContent() {
   };
 
   const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
+    if (!/^[A-Z0-9]*$/i.test(value)) return;
     const newBoxes = [...boxes];
-    newBoxes[index] = value.slice(-1);
+    newBoxes[index] = value.slice(-1).toUpperCase();
     setBoxes(newBoxes);
-    if (value && index < 5) {
+    if (value && index < 7) {
       inputsRef.current[index + 1]?.focus();
     }
   };
@@ -150,6 +150,17 @@ function VerifyContent() {
     if (e.key === 'Backspace' && !boxes[index] && index > 0) {
       inputsRef.current[index - 1]?.focus();
     }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/[^A-Z0-9]/gi, "").toUpperCase().slice(0, 8);
+    if (!pasted) return;
+    const newBoxes = Array(8).fill("");
+    pasted.split("").forEach((char, i) => { newBoxes[i] = char; });
+    setBoxes(newBoxes);
+    const nextEmpty = pasted.length < 8 ? pasted.length : 7;
+    inputsRef.current[nextEmpty]?.focus();
   };
 
   if (status === 'verifying') {
@@ -198,7 +209,7 @@ function VerifyContent() {
           </h1>
           
           <p className="text-xl text-slate-600 leading-relaxed">
-            Cek inbox email lo, kami kirim kode verifikasi 6 digit. Masukkin kodenya di sini.
+            Cek inbox email lo, kami kirim kode verifikasi 8 karakter. Masukkin kodenya di sini.
           </p>
 
           <div className="grid grid-cols-2 gap-4 pt-6">
@@ -227,8 +238,8 @@ function VerifyContent() {
         </div>
 
         {/* RIGHT SIDE - VERIFY FORM */}
-        <div className="w-full max-w-[400px] mx-auto lg:mx-0">
-          <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-200/60 p-8 lg:p-10">
+        <div className="w-full max-w-[460px] mx-auto lg:mx-0">
+          <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-200/60 p-8">
             
             {/* Mobile Logo */}
             <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
@@ -243,40 +254,62 @@ function VerifyContent() {
               </span>
             </div>
 
-            <div className="mb-8">
+            <div className="mb-6">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Masukkan kode OTP</h2>
               <p className="text-sm text-slate-500">
                 Kode dikirim ke <span className="font-semibold text-slate-900">{email}</span>
               </p>
             </div>
 
-            <form onSubmit={handleOtpSubmit} className="space-y-6">
-              <div className="flex gap-2 justify-center">
+            {/* Progress dots */}
+            <div className="flex items-center justify-center gap-1.5 mb-5">
+              {boxes.map((box, i) => (
+                <div
+                  key={i}
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    box ? "w-6 bg-slate-900" : "w-3 bg-slate-200"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <form onSubmit={handleOtpSubmit} className="space-y-5">
+              {/* OTP boxes — 8 kotak dalam satu row, ukuran fluid */}
+              <div className="grid grid-cols-8 gap-1.5">
                 {boxes.map((box, index) => (
                   <input
                     key={index}
                     ref={(el) => { inputsRef.current[index] = el; }}
                     type="text"
-                    inputMode="numeric"
+                    inputMode="text"
                     maxLength={1}
                     value={box}
                     onChange={(e) => handleChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(index, e)}
-                    className="w-12 h-14 text-center text-2xl font-bold bg-slate-50 border-2 border-slate-200 focus:border-slate-900 rounded-xl focus:outline-none focus:bg-white transition-all"
+                    onPaste={handlePaste}
+                    className={`aspect-square w-full text-center text-lg font-bold rounded-xl border-2 focus:outline-none transition-colors duration-150 uppercase
+                      ${box
+                        ? "bg-slate-900 border-slate-900 text-white"
+                        : "bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-900 focus:bg-white"
+                      }`}
                   />
                 ))}
               </div>
 
-              <button 
-                type="submit" 
-                disabled={isSubmitting || boxes.join("").length !== 6}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base shadow-lg shadow-slate-900/20"
+              <p className="text-center text-xs text-slate-400">
+                {boxes.filter(Boolean).length}/8 karakter diisi
+              </p>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || boxes.join("").length !== 8}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base shadow-lg shadow-slate-900/20 active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
-                    Verifikasi
+                    Verifikasi Sekarang
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
@@ -287,14 +320,18 @@ function VerifyContent() {
                   type="button"
                   onClick={handleResend}
                   disabled={countdown > 0 || isResending}
-                  className="text-sm font-semibold text-slate-900 hover:underline disabled:text-slate-400 disabled:no-underline flex items-center justify-center gap-2 mx-auto"
+                  className="text-sm font-semibold text-slate-900 hover:underline disabled:text-slate-400 disabled:no-underline flex items-center justify-center gap-2 mx-auto transition-colors"
                 >
                   {isResending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <RefreshCw className="w-4 h-4" />
                   )}
-                  {countdown > 0 ? `Kirim ulang (${countdown}s)` : 'Kirim ulang kode'}
+                  {countdown > 0 ? (
+                    <span>Kirim ulang dalam <span className="tabular-nums">{countdown}s</span></span>
+                  ) : (
+                    "Kirim ulang kode"
+                  )}
                 </button>
               </div>
             </form>

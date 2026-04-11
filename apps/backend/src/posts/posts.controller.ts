@@ -79,6 +79,19 @@ export class PostsController {
     return this.postsService.createPostFromUrls(userId, dto);
   }
 
+  // Video post creation from already-uploaded videoId (JSON body, no file)
+  @Post('video-from-id')
+  async createVideoPostFromId(
+    @GetUser('id') userId: string,
+    @Body() body: { videoId: string; content: string; title?: string; tags?: string[] },
+  ) {
+    return this.postsService.createPostFromVideoId(userId, body.videoId, {
+      content: body.content || '-',
+      title: body.title,
+      tags: body.tags,
+    } as any);
+  }
+
   // Video post creation (single video). FormData key: video
   @Post('video')
   @UseInterceptors(FileInterceptor('video'))
@@ -87,6 +100,10 @@ export class PostsController {
     @Body() dto: CreatePostDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
+    // New flow: videoId provided (video already uploaded via /videos/upload)
+    if ((dto as any).videoId && !file) {
+      return this.postsService.createPostFromVideoId(userId, (dto as any).videoId, dto);
+    }
     // Buat post dengan konten normatif (fallback jika kosong)
     const normDto: CreatePostDto = {
       title: dto.title,

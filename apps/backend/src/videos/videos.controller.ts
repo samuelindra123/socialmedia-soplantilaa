@@ -1,151 +1,67 @@
 import {
-  Body,
   Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
   Post,
-  Query,
-  Put,
-  UploadedFiles,
-  UploadedFile,
+  Get,
+  Delete,
+  Param,
+  Body,
   UseInterceptors,
+  UploadedFiles,
+  Request,
+  BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { VideosService } from './videos.service';
-import { UploadVideoDto } from './dto/upload-video.dto';
-import { ListVideosDto } from './dto/list-videos.dto';
 import { GetUser } from '../common/decorators/get-user.decorator';
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
-import { VideoResponseDto } from './dto/video-response.dto';
-import {
-  CompleteResumableUploadDto,
-  CreateResumableUploadSessionDto,
-} from './dto/resumable-video.dto';
-import { ResumableVideoUploadService } from './resumable-video-upload.service';
 
 @Controller('videos')
-@ApiTags('Videos')
 export class VideosController {
-  constructor(
-    private readonly videosService: VideosService,
-    private readonly resumableUploadService: ResumableVideoUploadService,
-  ) {}
+  constructor(private readonly videosService: VideosService) {}
 
-  @Post('resumable/sessions')
-  @ApiOperation({ summary: 'Membuat session resumable upload untuk video.' })
-  createResumableSession(
-    @GetUser('id') userId: string,
-    @Body() dto: CreateResumableUploadSessionDto,
+  @Post('upload')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'video', maxCount: 1 },
+        { name: 'thumbnail', maxCount: 1 },
+      ],
+      {
+        storage: memoryStorage(),
+        limits: { fileSize: 200 * 1024 * 1024 },
+      },
+    ),
+  )
+  async uploadVideo(
+    @UploadedFiles()
+    files: { video?: Express.Multer.File[]; thumbnail?: Express.Multer.File[] },
+    @Body() body: { width?: string; height?: string; duration?: string },
+    @Request() req: any,
   ) {
-    return this.resumableUploadService.createSession(userId, dto);
-  }
-
-  @Put('resumable/sessions/:sessionId/chunks/:chunkIndex')
-  @UseInterceptors(FileInterceptor('chunk'))
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Unggah atau retry satu chunk video.' })
-  uploadResumableChunk(
-    @GetUser('id') userId: string,
-    @Param('sessionId') sessionId: string,
-    @Param('chunkIndex', ParseIntPipe) chunkIndex: number,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    return this.resumableUploadService.uploadChunk(
-      userId,
-      sessionId,
-      chunkIndex,
-      file,
+    if (!files?.video?.[0]) throw new BadRequestException('File video wajib ada');
+    return this.videosService.uploadVideo(
+      files.video[0],
+      files.thumbnail?.[0],
+      req.user.id,
+      {
+        width: body.width ? parseInt(body.width) : undefined,
+        height: body.height ? parseInt(body.height) : undefined,
+        duration: body.duration ? parseInt(body.duration) : undefined,
+      },
     );
   }
 
-  @Get('resumable/sessions/:sessionId')
-  @ApiOperation({ summary: 'Cek status session resumable upload.' })
-  getResumableSessionStatus(
-    @GetUser('id') userId: string,
-    @Param('sessionId') sessionId: string,
-  ) {
-    return this.resumableUploadService.getSessionStatus(userId, sessionId);
-  }
-
-  @Post('resumable/sessions/:sessionId/complete')
-  @ApiOperation({
-    summary:
-      'Selesaikan upload chunk, gabungkan file, lalu publikasikan video.',
-  })
-  completeResumableSession(
-    @GetUser('id') userId: string,
-    @Param('sessionId') sessionId: string,
-    @Body() dto: CompleteResumableUploadDto,
-  ) {
-    return this.resumableUploadService.completeSession(userId, sessionId, dto);
-  }
-
-  @Delete('resumable/sessions/:sessionId')
-  @ApiOperation({ summary: 'Batalkan session resumable upload.' })
-  cancelResumableSession(
-    @GetUser('id') userId: string,
-    @Param('sessionId') sessionId: string,
-  ) {
-    return this.resumableUploadService.cancelSession(userId, sessionId);
-  }
-
-  @Post('upload')
-  @UseInterceptors(FilesInterceptor('videos', 5))
-  @ApiOperation({
-    summary: 'Unggah video dan jalankan proses kompresi di background.',
-  })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        title: { type: 'string' },
-        description: { type: 'string' },
-        videos: {
-          type: 'array',
-          items: { type: 'string', format: 'binary' },
-        },
-      },
-    },
-  })
-  @ApiCreatedResponse({ description: 'Job pemrosesan dimasukkan ke antrean.' })
-  async uploadVideos(
-    @GetUser('id') userId: string,
-    @UploadedFiles() files: Express.Multer.File[],
-    @Body() dto: UploadVideoDto,
-  ) {
-    return this.videosService.enqueueUploads(userId, files, dto);
+  @Get(':id/status')
+  async getStatus(@Param('id') id: string, @Request() req: any) {
+    return this.videosService.getVideoStatus(id, req.user.id);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Mengambil detail video milik pengguna.' })
-  @ApiOkResponse({ type: VideoResponseDto })
   async getVideo(@GetUser('id') userId: string, @Param('id') id: string) {
     return this.videosService.getVideo(userId, id);
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Daftar video dengan pagination.' })
-  @ApiOkResponse({ description: 'Daftar video berhasil diambil.' })
-  async listVideos(
-    @GetUser('id') userId: string,
-    @Query() query: ListVideosDto,
-  ) {
-    return this.videosService.listVideos(userId, query);
-  }
-
   @Delete(':id')
-  @ApiOperation({ summary: 'Soft delete video dan hapus aset di storage.' })
-  @ApiOkResponse({ description: 'Video berhasil ditandai sebagai terhapus.' })
   async deleteVideo(@GetUser('id') userId: string, @Param('id') id: string) {
     return this.videosService.deleteVideo(userId, id);
   }

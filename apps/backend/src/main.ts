@@ -5,12 +5,35 @@ import {
 } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
 import * as express from 'express';
 import { join } from 'path';
 import * as classValidator from 'class-validator';
 import * as classTransformer from 'class-transformer';
+import { ServerOptions } from 'socket.io';
+
+class SocketIOAdapter extends IoAdapter {
+  createIOServer(port: number, options?: ServerOptions): any {
+    const server = super.createIOServer(port, {
+      ...options,
+      cors: {
+        origin: [
+          process.env.FRONTEND_URL || 'http://localhost:3000',
+          'http://localhost:3000',
+          'https://www.soplantila.my.id',
+          'https://soplantila.my.id',
+        ],
+        credentials: true,
+        methods: ['GET', 'POST'],
+      },
+      transports: ['websocket', 'polling'],
+      allowEIO3: true,
+    });
+    return server;
+  }
+}
 
 async function bootstrap() {
   // Provide adapter explicitly to avoid module-resolution issues in monorepo installs.
@@ -19,12 +42,29 @@ async function bootstrap() {
     new ExpressAdapter(),
   );
 
-  // Increase body size limit for video uploads (100MB)
-  app.use(json({ limit: '100mb' }));
-  app.use(urlencoded({ limit: '100mb', extended: true }));
+  // Increase body size limit for video uploads (150MB to allow validation in controller)
+  app.use(json({ limit: '150mb' }));
+  app.use(urlencoded({ limit: '150mb', extended: true }));
 
   // Serve static files for uploads
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+
+  // WebSocket adapter with CORS
+  // Bind to the underlying HTTP server explicitly to avoid instanceof edge-cases
+  // where the adapter may not attach to the same server in monorepo/dev setups.
+  app.useWebSocketAdapter(new SocketIOAdapter(app.getHttpServer()));
+
+  // Global exception filter for multer errors
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err && err.message && err.message.includes('Invalid format')) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: err.message,
+        error: 'Bad Request',
+      });
+    }
+    next(err);
+  });
 
   // Validation
   app.useGlobalPipes(
@@ -87,7 +127,8 @@ async function bootstrap() {
   console.log(`📚 API Documentation: http://localhost:${port}/api-docs`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(
-    `🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}\n`,
+    `🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`,
   );
+  console.log(`🔌 WebSocket Gateway enabled with CORS\n`);
 }
 void bootstrap();

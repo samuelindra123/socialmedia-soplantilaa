@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Grid, List, Image as ImageIcon, FileText } from "lucide-react";
 import PostCard from "@/components/feed/PostCard";
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 
 interface ProfileTabsProps {
   posts: any[];
@@ -24,7 +24,7 @@ export default function ProfileTabs({ posts, viewerUsername }: ProfileTabsProps)
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {posts.length > 0 ? (
             posts.map((post) => (
-              <PostCard key={post.id} post={post} context="profile" currentUsername={viewerUsername} prefetchComments />
+              <PostCard key={post.id} post={post} context="profile" currentUsername={viewerUsername} />
             ))
           ) : (
             <div className="col-span-1 md:col-span-2 text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">

@@ -347,3 +347,100 @@ body {
 .delay-700 {
   animation-delay: 700ms;
 }
+
+/* ========================================
+   Plyr Video Player Custom Styles
+   ======================================== */
+
+/* Plyr theme customization */
+.plyr {
+  --plyr-color-main: #2563EB;
+  --plyr-video-background: #0F172A;
+  --plyr-menu-background: rgba(15, 23, 42, 0.95);
+  --plyr-menu-color: #F8FAFC;
+  border-radius: 0;
+}
+
+/* Smooth controls appearance */
+.plyr__controls {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  padding: 20px 16px 16px;
+}
+
+/* Progress bar styling */
+.plyr__progress input[type="range"] {
+  color: #2563EB;
+}
+
+.plyr__progress__buffer {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Control buttons */
+.plyr__control {
+  color: white;
+}
+
+.plyr__control:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.plyr__control.plyr__tab-focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.5);
+}
+
+/* Volume control */
+.plyr__volume input[type="range"] {
+  color: #2563EB;
+}
+
+/* Settings menu */
+.plyr__menu__container {
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.plyr__menu__container [role="menuitemradio"][aria-checked="true"]::before {
+  background: #2563EB;
+}
+
+/* Quality badge */
+.plyr__menu__container .plyr__control[role="menuitemradio"]::after {
+  border-radius: 4px;
+}
+
+/* Loading spinner */
+.plyr--loading .plyr__controls {
+  display: none;
+}
+
+/* Poster image */
+.plyr__poster {
+  background-size: cover;
+  background-position: center;
+}
+
+/* Hide Plyr branding */
+.plyr__control--overlaid {
+  background: rgba(37, 99, 235, 0.9);
+  border-radius: 50%;
+  padding: 20px;
+}
+
+.plyr__control--overlaid:hover {
+  background: rgba(37, 99, 235, 1);
+  transform: scale(1.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .plyr__controls {
+    padding: 16px 12px 12px;
+  }
+  
+  .plyr__control {
+    padding: 8px;
+  }
+}

@@ -14,20 +14,20 @@ export default function SocialLayout({ children }: { children: ReactNode }) {
   const preference = useThemeStore((s) => s.preference);
   const hasHydrated = useThemeStore((s) => s._hasHydrated);
   const [mounted, setMounted] = useState(false);
-  
+
   useEffect(() => {
     setMounted(true);
   }, []);
-  
+
   // Determine effective theme
   const effectiveTheme = mounted && hasHydrated ? resolveEffectiveTheme(preference) : 'light';
   const isDark = effectiveTheme === 'dark';
-  
+
   return (
-    <div 
+    <div
       className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen ${isDark ? 'dark bg-slate-900 text-white' : 'bg-white text-slate-900'}`}
       style={{ colorScheme: effectiveTheme }}
-    > 
+    >
       <QueryProvider>
         <NotificationsSocketProvider>
           {children}
@@ -37,4 +37,3 @@ export default function SocialLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

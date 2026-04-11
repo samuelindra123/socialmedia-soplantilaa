@@ -7,7 +7,7 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds
+  timeout: 300000, // 5 minutes (for video uploads)
 });
 
 // Request interceptor - rely on HttpOnly cookies handled by server proxy

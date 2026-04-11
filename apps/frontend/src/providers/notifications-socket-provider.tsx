@@ -8,6 +8,7 @@ import { useNotificationStore } from "@/store/notifications";
 import { Notification } from "@/types";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { resolveSocketBaseUrl } from "@/lib/socket-url";
 
 interface NotificationsSocketContextValue {
   socket: Socket | null;
@@ -31,20 +32,11 @@ export function NotificationsSocketProvider({ children }: { children: ReactNode 
   const connectionRef = useRef<Socket | null>(null);
 
   const baseUrl = useMemo(() => {
-    const raw = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-    const normalized =
-      typeof window !== "undefined" && window.location.protocol === "https:"
-        ? raw.replace(/^http:\/\//, "https://")
-        : raw;
-    return normalized.replace(/\/?api$/, "");
+    return resolveSocketBaseUrl(process.env.NEXT_PUBLIC_API_URL);
   }, []);
 
   useEffect(() => {
     if (!user?.id) {
-      connectionRef.current?.disconnect();
-      connectionRef.current = null;
-      setSocket(null);
-      setIsConnected(false);
       return;
     }
 
@@ -52,21 +44,36 @@ export function NotificationsSocketProvider({ children }: { children: ReactNode 
       transports: ["websocket", "polling"],
       withCredentials: true,
       autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      reconnectionAttempts: 5,
     });
 
     connectionRef.current = instance;
-    setSocket(instance);
+
+    let lastErrorLogAt = 0;
+    let lastErrorMessage = "";
 
     instance.on("connect", () => {
+      setSocket(instance);
       setIsConnected(true);
     });
 
     instance.on("disconnect", () => {
+      setSocket(null);
       setIsConnected(false);
     });
 
     instance.on("connect_error", (error) => {
-      console.warn("[NotificationsSocket] Connection error", error.message);
+      const now = Date.now();
+      const sameMessage = error.message === lastErrorMessage;
+      const withinThrottleWindow = now - lastErrorLogAt < 10000;
+      if (!sameMessage || !withinThrottleWindow) {
+        console.warn("[NotificationsSocket] Connection error", error.message);
+        lastErrorLogAt = now;
+        lastErrorMessage = error.message;
+      }
     });
 
     instance.on("notification", (payload: Notification) => {
@@ -90,7 +97,9 @@ export function NotificationsSocketProvider({ children }: { children: ReactNode 
       instance.disconnect();
       setSocket(null);
       setIsConnected(false);
-      connectionRef.current = null;
+      if (connectionRef.current === instance) {
+        connectionRef.current = null;
+      }
     };
   }, [addNotification, baseUrl, incrementUnreadMessages, queryClient, user?.id]);
 

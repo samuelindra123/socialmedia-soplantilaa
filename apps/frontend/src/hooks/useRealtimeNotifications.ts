@@ -1,27 +1,21 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { io, Socket } from "socket.io-client";
 import useAuthStore from "@/store/auth";
 import { useNotificationStore } from "@/store/notifications";
-
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+import { resolveSocketBaseUrl } from "@/lib/socket-url";
 
 function getWsBaseUrl() {
-  const upgraded =
-    typeof window !== "undefined" && window.location.protocol === "https:"
-      ? RAW_API_URL.replace(/^http:\/\//, "https://")
-      : RAW_API_URL;
-
-  return upgraded.replace(/\/api\/?$/, "");
+  return resolveSocketBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 }
 
 export function useRealtimeNotifications() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
-  const notifSocketRef = useRef<Socket | null>(null);
-  const msgSocketRef = useRef<Socket | null>(null);
+  const [notifSocket, setNotifSocket] = useState<Socket | null>(null);
+  const [msgSocket, setMsgSocket] = useState<Socket | null>(null);
   
   const incrementUnreadMessages = useNotificationStore((s) => s.incrementUnreadMessages);
   const incrementFollowRequests = useNotificationStore((s) => s.incrementFollowRequests);
@@ -36,12 +30,20 @@ export function useRealtimeNotifications() {
     const notifSocket = io(`${baseUrl}/notifications`, {
       transports: ["websocket", "polling"],
       withCredentials: true,
+      reconnection: true,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      reconnectionAttempts: 5,
     });
 
-    notifSocketRef.current = notifSocket;
-
     notifSocket.on("connect", () => {
+      setNotifSocket(notifSocket);
       console.log("Notifications socket connected");
+    });
+
+    notifSocket.on("connect_error", (error) => {
+      console.log("Notifications socket error:", error.message);
+      // Silently handle errors
     });
 
     // New follow request
@@ -69,6 +71,7 @@ export function useRealtimeNotifications() {
     });
 
     notifSocket.on("disconnect", () => {
+      setNotifSocket(null);
       console.log("Notifications socket disconnected");
     });
 
@@ -77,12 +80,20 @@ export function useRealtimeNotifications() {
     const msgSocket = io(`${msgBaseUrl}/messages`, {
       transports: ["websocket", "polling"],
       withCredentials: true,
+      reconnection: true,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      reconnectionAttempts: 5,
     });
 
-    msgSocketRef.current = msgSocket;
-
     msgSocket.on("connect", () => {
+      setMsgSocket(msgSocket);
       console.log("Messages socket connected");
+    });
+
+    msgSocket.on("connect_error", (error) => {
+      console.log("Messages socket error:", error.message);
+      // Silently handle errors
     });
 
     // New message notification
@@ -99,16 +110,17 @@ export function useRealtimeNotifications() {
     });
 
     msgSocket.on("disconnect", () => {
+      setMsgSocket(null);
       console.log("Messages socket disconnected");
     });
 
     return () => {
       notifSocket.close();
       msgSocket.close();
-      notifSocketRef.current = null;
-      msgSocketRef.current = null;
+      setNotifSocket(null);
+      setMsgSocket(null);
     };
   }, [user?.id, queryClient, incrementUnreadMessages, incrementFollowRequests, decrementFollowRequests]);
 
-  return { notifSocket: notifSocketRef.current, msgSocket: msgSocketRef.current };
+  return { notifSocket, msgSocket };
 }

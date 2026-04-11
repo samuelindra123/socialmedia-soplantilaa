@@ -1,78 +1,55 @@
-/**
- * 🎬 Video Playback Store v2 - Instagram Style
- * 
- * PRINSIP UTAMA:
- * 1. Hanya SATU video yang aktif di seluruh aplikasi
- * 2. Video element di-manage oleh store, bukan component
- * 3. Modal tidak punya video sendiri - hanya UI overlay
- * 4. Semua state tersinkronisasi via single source of truth
- */
-
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 
 interface VideoPlaybackState {
-  // Active video info
   activePostId: string | null;
   videoElement: HTMLVideoElement | null;
   videoUrl: string | null;
-  
-  // Playback state
+  thumbnailUrl: string | null;
+
   isPlaying: boolean;
   isMuted: boolean;
   currentTime: number;
   duration: number;
   progress: number;
   isBuffering: boolean;
-  
-  // UI state
+
   showControls: boolean;
   isModalOpen: boolean;
-  
-  // Visibility tracking
+
   visibleVideos: Set<string>;
 }
 
 interface VideoPlaybackActions {
-  // Video registration
-  registerVideo: (postId: string, element: HTMLVideoElement, url: string) => void;
+  registerVideo: (postId: string, element: HTMLVideoElement, url: string, thumbnailUrl?: string | null) => void;
   unregisterVideo: (postId: string) => void;
-  
-  // Visibility tracking
   setVideoVisible: (postId: string, isVisible: boolean) => void;
-  
-  // Playback controls
+
   play: () => Promise<void>;
   pause: () => void;
   togglePlayPause: () => Promise<void>;
-  
-  // Audio controls
+
   mute: () => void;
   unmute: () => void;
   toggleMute: () => void;
-  
-  // Seeking
+
   seek: (time: number) => void;
   seekPercent: (percent: number) => void;
-  
-  // State updates (called by video events)
+
   onTimeUpdate: (time: number, duration: number) => void;
   onPlay: () => void;
   onPause: () => void;
   onEnded: () => void;
   onWaiting: () => void;
   onCanPlay: () => void;
-  
-  // UI
+
   showControlsTemporarily: () => void;
   hideControls: () => void;
-  
-  // Modal
+
   openModal: () => void;
   closeModal: () => void;
-  
-  // Cleanup
+
   reset: () => void;
 }
 
@@ -82,8 +59,9 @@ const initialState: VideoPlaybackState = {
   activePostId: null,
   videoElement: null,
   videoUrl: null,
+  thumbnailUrl: null,
   isPlaying: false,
-  isMuted: true, // Instagram default: muted
+  isMuted: true,
   currentTime: 0,
   duration: 0,
   progress: 0,
@@ -94,264 +72,171 @@ const initialState: VideoPlaybackState = {
 };
 
 let controlsTimeoutId: ReturnType<typeof setTimeout> | null = null;
+let playRequestToken = 0;
+
+const isAbortError = (e: unknown) => e instanceof DOMException && e.name === 'AbortError';
 
 export const useVideoPlaybackStore = create<VideoStore>()(
   subscribeWithSelector((set, get) => ({
     ...initialState,
 
-    registerVideo: (postId, element, url) => {
-      const { activePostId, videoElement: currentElement } = get();
-      const isSameElement = currentElement === element && activePostId === postId;
+    registerVideo: (postId, element, url, thumbnailUrl = null) => {
+      const { activePostId, videoElement: cur } = get();
+      const same = cur === element && activePostId === postId;
 
-      // Jika berpindah post atau element berbeda, pause yang lama
-      if (currentElement && !isSameElement) {
-        currentElement.pause();
+      if (cur && !same) {
+        playRequestToken++;
+        cur.pause();
       }
 
-      // Idempotent: jangan reset waktu jika element/pos sama
-      if (isSameElement) {
-        set({ videoUrl: url });
+      if (same) {
+        set({ videoUrl: url, thumbnailUrl: thumbnailUrl ?? get().thumbnailUrl });
         return;
       }
 
-      const current = Number.isFinite(element.currentTime) ? element.currentTime : 0;
-      const duration = Number.isFinite(element.duration) ? element.duration : 0;
+      const ct = Number.isFinite(element.currentTime) ? element.currentTime : 0;
+      const dur = Number.isFinite(element.duration) ? element.duration : 0;
+      const playing = !element.paused && !element.ended;
 
       set({
         activePostId: postId,
         videoElement: element,
         videoUrl: url,
-        currentTime: current,
-        duration,
-        progress: duration > 0 ? (current / duration) * 100 : 0,
+        thumbnailUrl,
+        currentTime: ct,
+        duration: dur,
+        progress: dur > 0 ? (ct / dur) * 100 : 0,
+        isPlaying: playing,
+        showControls: !playing,
       });
 
-      // Sync muted state
       element.muted = get().isMuted;
     },
 
     unregisterVideo: (postId) => {
       const { activePostId, videoElement } = get();
-      
-      if (activePostId === postId) {
-        if (videoElement) {
-          videoElement.pause();
-        }
-        set({
-          activePostId: null,
-          videoElement: null,
-          videoUrl: null,
-          isPlaying: false,
-          currentTime: 0,
-          progress: 0,
-          duration: 0,
-        });
-      }
+      if (activePostId !== postId) return;
+      videoElement?.pause();
+      set({ activePostId: null, videoElement: null, videoUrl: null, thumbnailUrl: null, isPlaying: false, currentTime: 0, progress: 0, duration: 0 });
     },
 
     setVideoVisible: (postId, isVisible) => {
       const { visibleVideos, activePostId, isModalOpen } = get();
-      const newVisible = new Set(visibleVideos);
-      
-      if (isVisible) {
-        newVisible.add(postId);
-      } else {
-        newVisible.delete(postId);
-      }
-      
-      set({ visibleVideos: newVisible });
-      
-      // Auto-pause jika video aktif keluar dari viewport dan modal tidak terbuka
-      if (!isVisible && activePostId === postId && !isModalOpen) {
-        get().pause();
-      }
+      const next = new Set(visibleVideos);
+      isVisible ? next.add(postId) : next.delete(postId);
+      set({ visibleVideos: next });
+      if (!isVisible && activePostId === postId && !isModalOpen) get().pause();
     },
 
     play: async () => {
       const { videoElement, isMuted } = get();
       if (!videoElement) return;
-      
+      const token = ++playRequestToken;
+
       try {
-        // Pastikan muted state sesuai
         videoElement.muted = isMuted;
         await videoElement.play();
+        if (token !== playRequestToken || get().videoElement !== videoElement) return;
         set({ isPlaying: true, showControls: false });
         get().showControlsTemporarily();
-      } catch (error) {
-        console.warn('Play failed:', error);
-        // Coba play dengan muted jika autoplay blocked
-        if (!isMuted) {
-          videoElement.muted = true;
-          set({ isMuted: true });
+      } catch (err) {
+        if (token !== playRequestToken) return;
+        if (isAbortError(err)) {
+          const { activePostId, visibleVideos, isModalOpen } = get();
+          const canRetry = get().videoElement === videoElement && (isModalOpen || (!!activePostId && visibleVideos.has(activePostId)));
+          if (!canRetry) return;
           try {
+            await new Promise(r => setTimeout(r, 120));
+            if (token !== playRequestToken || get().videoElement !== videoElement) return;
             await videoElement.play();
-            set({ isPlaying: true });
-          } catch (e) {
-            console.error('Play failed even with mute:', e);
-          }
+            if (token !== playRequestToken || get().videoElement !== videoElement) return;
+            set({ isPlaying: true, showControls: false });
+            get().showControlsTemporarily();
+          } catch (e2) { if (!isAbortError(e2)) console.warn('Play retry failed:', e2); }
+          return;
         }
+        // Fallback: force muted
+        videoElement.muted = true;
+        set({ isMuted: true });
+        try { await videoElement.play(); set({ isPlaying: true }); } catch { /* ignore */ }
       }
     },
 
     pause: () => {
       const { videoElement } = get();
       if (!videoElement) return;
-      
+      playRequestToken++;
       videoElement.pause();
       set({ isPlaying: false, showControls: true });
     },
 
     togglePlayPause: async () => {
       const { isPlaying, play, pause } = get();
-      if (isPlaying) {
-        pause();
-      } else {
-        await play();
-      }
+      isPlaying ? pause() : await play();
     },
 
-    mute: () => {
-      const { videoElement } = get();
-      if (videoElement) {
-        videoElement.muted = true;
-      }
-      set({ isMuted: true });
-    },
-
-    unmute: () => {
-      const { videoElement } = get();
-      if (videoElement) {
-        videoElement.muted = false;
-      }
-      set({ isMuted: false });
-    },
-
-    toggleMute: () => {
-      const { isMuted, mute, unmute } = get();
-      if (isMuted) {
-        unmute();
-      } else {
-        mute();
-      }
-    },
+    mute: () => { const { videoElement } = get(); if (videoElement) videoElement.muted = true; set({ isMuted: true }); },
+    unmute: () => { const { videoElement } = get(); if (videoElement) videoElement.muted = false; set({ isMuted: false }); },
+    toggleMute: () => { get().isMuted ? get().unmute() : get().mute(); },
 
     seek: (time) => {
       const { videoElement, duration } = get();
       if (!videoElement || !duration) return;
-      
-      const clampedTime = Math.max(0, Math.min(time, duration));
-      videoElement.currentTime = clampedTime;
-      set({ 
-        currentTime: clampedTime,
-        progress: (clampedTime / duration) * 100,
-      });
+      const t = Math.max(0, Math.min(time, duration));
+      videoElement.currentTime = t;
+      set({ currentTime: t, progress: (t / duration) * 100 });
     },
 
-    seekPercent: (percent) => {
+    seekPercent: (pct) => {
       const { duration, seek } = get();
-      if (!duration) return;
-      
-      const time = (percent / 100) * duration;
-      seek(time);
+      if (duration) seek((pct / 100) * duration);
     },
 
     onTimeUpdate: (time, duration) => {
       if (!Number.isFinite(time) || !Number.isFinite(duration)) return;
-      
-      set({
-        currentTime: time,
-        duration: duration,
-        progress: duration > 0 ? (time / duration) * 100 : 0,
-      });
+      set({ currentTime: time, duration, progress: duration > 0 ? (time / duration) * 100 : 0 });
     },
 
-    onPlay: () => {
-      set({ isPlaying: true, isBuffering: false });
-    },
-
-    onPause: () => {
-      set({ isPlaying: false, showControls: true });
-    },
-
+    onPlay: () => set({ isPlaying: true, isBuffering: false }),
+    onPause: () => set({ isPlaying: false, showControls: true }),
     onEnded: () => {
-      // Loop behavior - restart video
       const { videoElement } = get();
-      if (videoElement) {
-        videoElement.currentTime = 0;
-        videoElement.play().catch(() => {});
-      }
+      if (videoElement) { videoElement.currentTime = 0; videoElement.play().catch(() => {}); }
     },
-
-    onWaiting: () => {
-      set({ isBuffering: true });
-    },
-
-    onCanPlay: () => {
-      set({ isBuffering: false });
-    },
+    onWaiting: () => set({ isBuffering: true }),
+    onCanPlay: () => set({ isBuffering: false }),
 
     showControlsTemporarily: () => {
       set({ showControls: true });
-      
-      if (controlsTimeoutId) {
-        clearTimeout(controlsTimeoutId);
-      }
-      
-      const { isPlaying } = get();
-      if (isPlaying) {
-        controlsTimeoutId = setTimeout(() => {
-          set({ showControls: false });
-        }, 3000);
+      if (controlsTimeoutId) clearTimeout(controlsTimeoutId);
+      if (get().isPlaying) {
+        controlsTimeoutId = setTimeout(() => set({ showControls: false }), 3000);
       }
     },
 
-    hideControls: () => {
-      const { isPlaying } = get();
-      if (isPlaying) {
-        set({ showControls: false });
-      }
-    },
+    hideControls: () => { if (get().isPlaying) set({ showControls: false }); },
 
-  openModal: () => {
-      // Saat modal dibuka, sumber audio dialihkan ke modal (mirror dimute)
-      // Prinsip: hanya satu sumber audio aktif
+    openModal: () => {
       const { videoElement } = get();
-      if (videoElement) {
-        // Ketika modal aktif, tetap playing namun pastikan muted mengikuti state
-        videoElement.muted = get().isMuted;
-      }
+      if (videoElement) videoElement.muted = get().isMuted;
       set({ isModalOpen: true, showControls: true });
-  },
+    },
 
-  closeModal: () => {
-      // Saat modal ditutup, kembalikan kontrol ke feed
+    closeModal: () => {
       const { videoElement } = get();
-      if (videoElement) {
-        videoElement.muted = get().isMuted;
-      }
+      if (videoElement) videoElement.muted = get().isMuted;
       set({ isModalOpen: false, showControls: true });
-  },
+    },
 
     reset: () => {
       const { videoElement } = get();
-      if (videoElement) {
-        videoElement.pause();
-        videoElement.currentTime = 0;
-      }
-      
-      if (controlsTimeoutId) {
-        clearTimeout(controlsTimeoutId);
-      }
-      
-      set({
-        ...initialState,
-        visibleVideos: new Set(),
-      });
+      if (videoElement) { videoElement.pause(); videoElement.currentTime = 0; }
+      if (controlsTimeoutId) clearTimeout(controlsTimeoutId);
+      set({ ...initialState, visibleVideos: new Set() });
     },
   }))
 );
 
-// Selector hooks dengan useShallow untuk mencegah infinite loop
 export const useActiveVideo = () => useVideoPlaybackStore(
   useShallow((s) => ({
     activePostId: s.activePostId,
@@ -363,6 +248,7 @@ export const useActiveVideo = () => useVideoPlaybackStore(
     showControls: s.showControls,
     isBuffering: s.isBuffering,
     isModalOpen: s.isModalOpen,
+    thumbnailUrl: s.thumbnailUrl,
   }))
 );
 

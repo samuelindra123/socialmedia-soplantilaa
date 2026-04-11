@@ -74,6 +74,7 @@ export interface Post {
   hashtags?: string[]; // Added hashtags
   links?: string[]; // Added links
   isFollowing?: boolean; // Added isFollowing
+  background?: string | null; // Text post background gradient/color
 }
 
 export interface PostImage {
@@ -91,9 +92,10 @@ export interface PostImage {
 export interface PostVideo {
   id: string;
   url: string; // Deprecated - use originalUrl or processedUrl
-  originalUrl: string; // ⚡ For instant playback
-  processedUrl: string; // Current best quality URL
-  thumbnailUrl: string | null;
+  originalUrl?: string | null; // ⚡ For instant playback
+  processedUrl?: string | null; // Current best quality URL
+  thumbnailUrl?: string | null;
+  thumbnail?: string | null; // Backward compatibility from backend mapping
   status: 'READY' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   qualityUrls: {
     '144p'?: string;
@@ -102,9 +104,9 @@ export interface PostVideo {
     '480p'?: string;
     '720p'?: string;
   } | null;
-  duration?: number;
-  width?: number;
-  height?: number;
+  duration?: number | null;
+  width?: number | null;
+  height?: number | null;
   createdAt: string;
 }
 
@@ -115,6 +117,29 @@ export enum VideoStatus {
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
 }
+
+export interface Video {
+  id: string;
+  title: string | null;
+  status: 'processing' | 'ready' | 'failed';
+  progress: number;
+  videoUrl: string | null;
+  thumbnailUrl: string | null;
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  originalSize: number | null;
+  compressedSize: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VideoUploadResponse {
+  id: string;
+  status: string;
+}
+
+export interface VideoStatusResponse extends Video {}
 
 // Comment Types
 export interface Comment {

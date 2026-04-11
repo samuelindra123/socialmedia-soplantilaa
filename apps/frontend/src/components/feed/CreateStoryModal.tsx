@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { X, Image as ImageIcon, Video, Upload, Loader2, Plus, Check, AlertCircle } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import toast from "react-hot-toast";
-import axios from "axios";
+import { uploadToAppwrite } from "@/lib/appwrite-storage";
 
 interface CreateStoryModalProps {
   isOpen: boolean;
@@ -20,12 +20,6 @@ interface MediaFile {
   uploadStatus: "pending" | "uploading" | "completed" | "error";
   uploadProgress: number;
   uploadedUrl?: string;
-}
-
-interface PresignedUrlResponse {
-  uploadUrl: string;
-  fileUrl: string;
-  key: string;
 }
 
 export default function CreateStoryModal({
@@ -129,37 +123,17 @@ export default function CreateStoryModal({
     });
   }, [currentPreviewIndex]);
 
-  // Upload a single file directly to S3 using presigned URL
-  const uploadFileToS3 = async (
+  // Upload a single file directly to Appwrite Storage from the browser
+  const uploadFileToAppwrite = async (
     file: File,
-    uploadUrl: string,
     fileId: string,
-  ): Promise<void> => {
-    const controller = new AbortController();
-    abortControllersRef.current.set(fileId, controller);
-
-    try {
-      await axios.put(uploadUrl, file, {
-        headers: {
-          "Content-Type": file.type,
-        },
-        signal: controller.signal,
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setMediaFiles((prev) =>
-              prev.map((mf) =>
-                mf.id === fileId
-                  ? { ...mf, uploadProgress: percent }
-                  : mf
-              )
-            );
-          }
-        },
-      });
-    } finally {
-      abortControllersRef.current.delete(fileId);
-    }
+  ): Promise<string> => {
+    const result = await uploadToAppwrite(file, (percent) => {
+      setMediaFiles((prev) =>
+        prev.map((mf) => mf.id === fileId ? { ...mf, uploadProgress: percent } : mf)
+      );
+    });
+    return result.fileUrl;
   };
 
   // Fallback: Upload via backend when presigned URL fails (CORS issues)
@@ -205,176 +179,49 @@ export default function CreateStoryModal({
     setUploadStage("uploading");
 
     try {
-      // Try presigned URL upload first, fallback to backend if CORS fails
-      let useBackendFallback = false;
-      let presignedData: { urls: PresignedUrlResponse[] } | null = null;
+      // Upload all files directly to Appwrite Storage from browser
+      const successfulUploads: Array<{ fileUrl: string; type: "IMAGE" | "VIDEO" }> = [];
+      let backendFallbackCount = 0;
 
-      try {
-        // Step 1: Get presigned URLs for all files
-        const filesInfo = mediaFiles.map((mf) => ({
-          fileName: mf.file.name,
-          contentType: mf.file.type,
-        }));
-
-        const response = await apiClient.post<{ urls: PresignedUrlResponse[] }>(
-          "/stories/presigned-urls",
-          { files: filesInfo }
-        );
-        presignedData = response.data;
-
-        // Test first file upload to check CORS
-        const testFile = mediaFiles[0];
-        const testPresigned = presignedData.urls[0];
-        
+      for (const mf of mediaFiles) {
         setMediaFiles((prev) =>
-          prev.map((f) =>
-            f.id === testFile.id ? { ...f, uploadStatus: "uploading" } : f
-          )
+          prev.map((f) => f.id === mf.id ? { ...f, uploadStatus: "uploading" } : f)
         );
 
         try {
-          await uploadFileToS3(testFile.file, testPresigned.uploadUrl, testFile.id);
-          
+          const fileUrl = await uploadFileToAppwrite(mf.file, mf.id);
           setMediaFiles((prev) =>
-            prev.map((f) =>
-              f.id === testFile.id
-                ? { ...f, uploadStatus: "completed", uploadedUrl: testPresigned.fileUrl }
-                : f
-            )
+            prev.map((f) => f.id === mf.id ? { ...f, uploadStatus: "completed", uploadedUrl: fileUrl } : f)
           );
-        } catch (corsError: any) {
-          // CORS or network error - fallback to backend upload
-          console.warn("Presigned URL failed (likely CORS), falling back to backend upload");
-          useBackendFallback = true;
-          
-          // Reset first file status
-          setMediaFiles((prev) =>
-            prev.map((f) =>
-              f.id === testFile.id ? { ...f, uploadStatus: "pending", uploadProgress: 0 } : f
-            )
-          );
-        }
-      } catch {
-        useBackendFallback = true;
-      }
-
-      let successfulUploads: Array<{ fileUrl: string; type: "IMAGE" | "VIDEO" }> = [];
-      let backendUploadCount = 0;
-
-      if (useBackendFallback) {
-        // Fallback: Upload all files via backend (sequentially to avoid overload)
-        // Each call to /stories creates the story directly
-        const captionText = caption.trim() || undefined;
-        
-        for (const mf of mediaFiles) {
-          setMediaFiles((prev) =>
-            prev.map((f) =>
-              f.id === mf.id ? { ...f, uploadStatus: "uploading" } : f
-            )
-          );
-
+          successfulUploads.push({ fileUrl, type: mf.type });
+        } catch (uploadError: any) {
+          // Fallback: upload via backend multipart
+          console.warn("Appwrite upload failed, fallback to backend:", uploadError?.message);
           try {
-            await uploadViaBackend(mf.file, mf.id, mf.type, captionText);
-            
+            await uploadViaBackend(mf.file, mf.id, mf.type, caption.trim() || undefined);
             setMediaFiles((prev) =>
-              prev.map((f) =>
-                f.id === mf.id
-                  ? { ...f, uploadStatus: "completed" }
-                  : f
-              )
+              prev.map((f) => f.id === mf.id ? { ...f, uploadStatus: "completed" } : f)
             );
-
-            backendUploadCount++;
-          } catch (error: any) {
-            console.error(`Failed to upload ${mf.file.name}:`, error);
-            
+            backendFallbackCount++;
+          } catch (backendError: any) {
             setMediaFiles((prev) =>
-              prev.map((f) =>
-                f.id === mf.id ? { ...f, uploadStatus: "error" } : f
-              )
+              prev.map((f) => f.id === mf.id ? { ...f, uploadStatus: "error" } : f)
             );
-          }
-        }
-      } else {
-        // Presigned URL worked - upload remaining files in parallel
-        const firstFile = mediaFiles[0];
-        const firstPresigned = presignedData!.urls[0];
-        successfulUploads.push({ fileUrl: firstPresigned.fileUrl, type: firstFile.type });
-
-        if (mediaFiles.length > 1) {
-          const remainingFiles = mediaFiles.slice(1);
-          const remainingPresigned = presignedData!.urls.slice(1);
-
-          const uploadPromises = remainingFiles.map(async (mf, index) => {
-            const presigned = remainingPresigned[index];
-            
-            setMediaFiles((prev) =>
-              prev.map((f) =>
-                f.id === mf.id ? { ...f, uploadStatus: "uploading" } : f
-              )
-            );
-
-            try {
-              await uploadFileToS3(mf.file, presigned.uploadUrl, mf.id);
-              
-              setMediaFiles((prev) =>
-                prev.map((f) =>
-                  f.id === mf.id
-                    ? { ...f, uploadStatus: "completed", uploadedUrl: presigned.fileUrl }
-                    : f
-                )
-              );
-
-              return { success: true, fileUrl: presigned.fileUrl, type: mf.type };
-            } catch (error: any) {
-              if (error.name === "CanceledError" || error.name === "AbortError") {
-                throw error;
-              }
-              
-              setMediaFiles((prev) =>
-                prev.map((f) =>
-                  f.id === mf.id ? { ...f, uploadStatus: "error" } : f
-                )
-              );
-
-              return { success: false, error };
-            }
-          });
-
-          const results = await Promise.all(uploadPromises);
-          
-          for (const result of results) {
-            if (result.success) {
-              successfulUploads.push({ fileUrl: result.fileUrl!, type: result.type! });
-            }
           }
         }
       }
 
-      // Check results
-      const totalSuccess = useBackendFallback ? backendUploadCount : successfulUploads.length;
-      
-      if (totalSuccess === 0) {
-        throw new Error("Semua upload gagal");
-      }
+      const totalSuccess = successfulUploads.length + backendFallbackCount;
+      if (totalSuccess === 0) throw new Error("Semua upload gagal");
 
       const failedCount = mediaFiles.length - totalSuccess;
-      if (failedCount > 0) {
-        toast.error(`${failedCount} file gagal diupload`);
-      }
+      if (failedCount > 0) toast.error(`${failedCount} file gagal diupload`);
 
-      // Step 3: Create stories from uploaded URLs (only if using presigned)
-      // Backend upload already creates the story, so skip this for fallback
-      if (!useBackendFallback) {
+      // Create stories from Appwrite-uploaded URLs (backend fallback already creates stories)
+      if (successfulUploads.length > 0) {
         setUploadStage("creating");
-        
-        const media = successfulUploads.map((r) => ({
-          mediaUrl: r.fileUrl,
-          mediaType: r.type,
-        }));
-
         await apiClient.post("/stories/from-urls", {
-          media,
+          media: successfulUploads.map((r) => ({ mediaUrl: r.fileUrl, mediaType: r.type })),
           caption: caption.trim() || undefined,
         });
       }

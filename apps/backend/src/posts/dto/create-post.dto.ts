@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUrl, IsArray } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { MaxWordCount } from '../../common/validators/max-word-count.validator';
 
 export class CreatePostDto {
@@ -20,5 +21,18 @@ export class CreatePostDto {
   mediaType?: 'image' | 'video';
 
   @IsOptional()
+  @IsString()
+  background?: string;
+
+  @IsOptional()
   tags?: string[] | string;
+
+  /** Link eksternal yang disertakan dalam post (opsional, bisa satu URL atau array) */
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value : value ? [value] : [],
+  )
+  @IsArray()
+  @IsUrl({}, { each: true, message: 'Setiap link harus berupa URL yang valid' })
+  link?: string[];
 }

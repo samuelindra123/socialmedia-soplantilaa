@@ -7,64 +7,70 @@ datasource db {
 }
 
 model User {
-  id                String                    @id @default(uuid())
-  email             String                    @unique
-  namaLengkap       String
-  password          String
-  isEmailVerified   Boolean                   @default(false)
-  verificationToken String?
-  verificationOtp   String?
-  otpExpiry         DateTime?
-  resetPasswordToken String?
-  resetPasswordOtp   String?
+  id                     String                    @id @default(uuid())
+  email                  String                    @unique
+  namaLengkap            String
+  password               String
+  isEmailVerified        Boolean                   @default(false)
+  verificationToken      String?
+  verificationOtp        String?
+  otpExpiry              DateTime?
+  resetPasswordToken     String?
+  resetPasswordOtp       String?
   resetPasswordOtpExpiry DateTime?
-  googleId         String?   @unique
-  failedLoginAttempts Int                    @default(0)
-  accountLockedUntil DateTime?
-  sessions         UserSession[]
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
-  bookmarks         Bookmark[]
-  comments          Comment[]
-  commentLikes      CommentLike[]
-  conversations     ConversationParticipant[]
-  followers         Follow[]                  @relation("UserFollowers")
-  following         Follow[]                  @relation("UserFollowing")
-  likes             Like[]
-  mentions          Mention[]
-  messages          Message[]
-  sentNotifications Notification[]            @relation("NotificationActor")
-  notifications     Notification[]            @relation("UserNotifications")
-  posts             Post[]
-  profile           Profile?
-  stories           Story[]
-  storyViews        StoryView[]
-  targetedBy        UserInteraction[]         @relation("TargetInteractions")
-  interactions      UserInteraction[]         @relation("UserInteractions")
-  videos            Video[]
-  emailLogs         EmailLog[]
+  googleId               String?                   @unique
+  failedLoginAttempts    Int                       @default(0)
+  accountLockedUntil     DateTime?
+  sessions               UserSession[]
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  bookmarks              Bookmark[]
+  comments               Comment[]
+  commentLikes           CommentLike[]
+  conversations          ConversationParticipant[]
+  followers              Follow[]                  @relation("UserFollowers")
+  following              Follow[]                  @relation("UserFollowing")
+  likes                  Like[]
+  mentions               Mention[]
+  messages               Message[]
+  sentNotifications      Notification[]            @relation("NotificationActor")
+  notifications          Notification[]            @relation("UserNotifications")
+  posts                  Post[]
+  profile                Profile?
+  stories                Story[]
+  storyViews             StoryView[]
+  targetedBy             UserInteraction[]         @relation("TargetInteractions")
+  interactions           UserInteraction[]         @relation("UserInteractions")
+  videos                 Video[]
+  emailLogs              EmailLog[]
 }
 
 model Video {
-  id           String      @id @default(uuid())
-  title        String?
-  description  String?
-  processedUrl String?
-  thumbnailUrl String?
-  duration     Int?
-  fileSize     Int         @default(0)
-  width        Int?
-  height       Int?
-  status       VideoStatus @default(PROCESSING)
-  userId       String
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  deletedAt    DateTime?
-  originalUrl  String?
-  qualityUrls  Json?
-  metadata     Json?
-  views        Int?
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String      @id @default(uuid())
+  title          String?
+  description    String?
+  processedUrl   String?
+  thumbnailUrl   String?
+  duration       Int?
+  fileSize       Int         @default(0)
+  width          Int?
+  height         Int?
+  status         VideoStatus @default(PROCESSING)
+  userId         String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+  originalUrl    String?
+  qualityUrls    Json?
+  metadata       Json?
+  views          Int?
+  // New fields for video upload feature
+  progress       Int         @default(0)
+  videoId        String?     // Appwrite file ID
+  thumbnailId    String?     // Appwrite file ID
+  originalSize   BigInt?     // ukuran asli dalam bytes
+  compressedSize BigInt?     // ukuran setelah kompresi
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -95,6 +101,7 @@ model Post {
   updatedAt  DateTime        @updatedAt
   title      String?
   type       String?         @default("text")
+  background String?
   links      String[]
   bookmarks  Bookmark[]
   comments   Comment[]
@@ -108,17 +115,17 @@ model Post {
 }
 
 model PostImage {
-  id        String   @id @default(uuid())
-  url       String
-  thumbnailUrl String?
-  blurhash  String?
-  width     Int?
-  height    Int?
-  thumbnailWidth Int?
+  id              String   @id @default(uuid())
+  url             String
+  thumbnailUrl    String?
+  blurhash        String?
+  width           Int?
+  height          Int?
+  thumbnailWidth  Int?
   thumbnailHeight Int?
-  postId    String
-  createdAt DateTime @default(now())
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId          String
+  createdAt       DateTime @default(now())
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model PostVideo {
@@ -185,14 +192,14 @@ model Mention {
 }
 
 model UserSession {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   userId       String
-  sessionToken String   @unique
+  sessionToken String    @unique
   deviceName   String?
   userAgent    String?
   ipAddress    String?
-  createdAt    DateTime @default(now())
-  lastSeen     DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  lastSeen     DateTime  @default(now())
   revokedAt    DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -338,21 +345,21 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String         @id @default(uuid())
+  id             String        @id @default(uuid())
   conversationId String
   senderId       String
   content        String?
-  status         MessageStatus  @default(SENT)
+  status         MessageStatus @default(SENT)
   mediaUrl       String?
   mediaType      MediaType?
   fileName       String?
-  isDeleted      Boolean        @default(false)
-  deletedForAll  Boolean        @default(false)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  isDeleted      Boolean       @default(false)
+  deletedForAll  Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   readAt         DateTime?
-  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User           @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
 }
@@ -526,7 +533,7 @@ model EmailLog {
   sentAt    DateTime?
   createdAt DateTime    @default(now())
 
-  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([createdAt])

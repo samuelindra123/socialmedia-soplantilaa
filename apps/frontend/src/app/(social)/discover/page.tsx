@@ -8,12 +8,14 @@ import { useSearchParams, usePathname } from "next/navigation";
 import SocialShell from "@/components/layouts/SocialShell";
 import { apiClient } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth";
+import { useVideoPlaybackStore } from "@/store/videoPlaybackV2";
+import { OptimizedVideoPlayer } from "@/components/OptimizedVideoPlayer";
 import { PaginatedResponse, Post, PostVideo } from "@/types";
 import { Search, Loader2, Heart, MessageSquare, MessageCircle, Filter, Smile, X, Play, Volume2, VolumeX, Pause, Maximize, RefreshCw, ChevronDown, Share2, VolumeX as VolumeMuteIcon, Volume2 as VolumeUnmuteIcon, Compass, User, Home } from "lucide-react";
 import SocialThemeWrapper from "@/components/SocialThemeWrapper";
 
 type DiscoverQueryData = InfiniteData<PaginatedResponse<Post>>;
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { useSocket, useSocketEvent } from "@/providers/SocketProvider";
@@ -82,6 +84,9 @@ function DiscoverContent() {
   const searchParams = useSearchParams();
   const typeFilter = searchParams.get("type");
   const { user } = useAuthStore();
+  const activePostId = useVideoPlaybackStore((state) => state.activePostId);
+  const currentTime = useVideoPlaybackStore((state) => state.currentTime);
+  const playbackIsPlaying = useVideoPlaybackStore((state) => state.isPlaying);
   const [q, setQ] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Array<{ id: string; content: string; userId?: string; parentId?: string; user: { id?: string; profile?: { username: string; profileImageUrl?: string | null } }; isLiked?: boolean; _count?: { likes?: number; replies?: number } }>>([]);
@@ -843,7 +848,11 @@ function DiscoverContent() {
                   aria-label="Tutup modal"
                 >
                   <X className="w-5 h-5" />
-                </button>
+                                <DiscoverMediaPanel
+                                  selectedPost={selectedPost}
+                                  initialTime={selectedPost.id === activePostId ? currentTime : 0}
+                                  autoResume={selectedPost.id === activePostId ? playbackIsPlaying : false}
+                                />
                 {/* Left: Media/Text */}
                 <DiscoverMediaPanel selectedPost={selectedPost} />
 
@@ -1158,176 +1167,65 @@ function DeleteCommentModal({ isOpen, onClose, onConfirm, isPending }: { isOpen:
 }
 
 // Separate component for modal media panel with video controls
-function DiscoverMediaPanel({ selectedPost }: { selectedPost: Post }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [videoProgress, setVideoProgress] = useState(0);
-  const [videoDuration, setVideoDuration] = useState(0);
-  const [showControls, setShowControls] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Check what media actually exists
-  const primaryVideo = selectedPost.videos && selectedPost.videos.length > 0 ? selectedPost.videos[0] : undefined;
-  const videoUrl = resolveVideoUrl(primaryVideo || null) || null;
+function DiscoverMediaPanel({
+  selectedPost,
+  initialTime = 0,
+  autoResume = false,
+}: {
+  selectedPost: Post;
+  initialTime?: number;
+  autoResume?: boolean;
+}) {
+  const primaryVideo = selectedPost.videos && selectedPost.videos.length > 0 ? selectedPost.videos[0] : selectedPost.video;
   const imageUrl = ensureValidUrl(selectedPost.images?.[0]?.url) || null;
 
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (isPlaying) {
-      videoRef.current.pause();
-    } else {
-      videoRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
+  const aspectClass = (() => {
+    if (!primaryVideo?.width || !primaryVideo?.height) return 'aspect-[9/16]';
+    const ratio = primaryVideo.width / primaryVideo.height;
+    if (ratio >= 1.7) return 'aspect-video';
+    if (ratio >= 1.2) return 'aspect-[4/3]';
+    if (ratio >= 0.9) return 'aspect-square';
+    if (ratio >= 0.7) return 'aspect-[4/5]';
+    return 'aspect-[9/16]';
+  })();
+  const videoFitMode: 'cover' | 'contain' = (() => {
+    if (!primaryVideo?.width || !primaryVideo?.height) return 'cover';
+    return (primaryVideo.width / primaryVideo.height) <= 0.62 ? 'contain' : 'cover';
+  })();
 
-  const toggleMute = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
+  if (primaryVideo) {
+    const normalizedOriginal = normalizeVideoUrl(primaryVideo.originalUrl || primaryVideo.url);
+    const normalizedProcessed = normalizeVideoUrl(primaryVideo.processedUrl || primaryVideo.url);
+    const normalizedThumbnail = normalizeVideoUrl(primaryVideo.thumbnailUrl ?? primaryVideo.thumbnail);
+    const normalizedPrimary = normalizedProcessed || normalizedOriginal || normalizeVideoUrl(primaryVideo.url);
 
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setVideoProgress(videoRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      setVideoDuration(videoRef.current.duration);
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      setVideoProgress(time);
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleMouseMove = () => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) setShowControls(false);
-    }, 3000);
-  };
-
-  const toggleFullscreen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!videoRef.current) return;
-    if (!document.fullscreenElement) {
-      videoRef.current.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    };
-  }, []);
-
-  // Auto-play video when modal opens
-  useEffect(() => {
-    if (videoRef.current && videoUrl) {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    }
-  }, [videoUrl]);
-
-  if (videoUrl) {
     return (
-      <div 
-        className="relative flex w-full md:flex-[2] min-w-0 items-center justify-center bg-black cursor-pointer group rounded-t-2xl md:rounded-none overflow-hidden max-h-[calc(100vh-8rem)] md:max-h-[90vh]"
-        onClick={togglePlay}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => isPlaying && setShowControls(false)}
-      >
-        <video
-          ref={videoRef}
-          src={videoUrl}
-          className="h-full w-full object-contain"
-          loop
-          muted={isMuted}
-          playsInline
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+      <div className="flex w-full md:flex-[2] min-w-0 items-center justify-center bg-black rounded-t-2xl md:rounded-none overflow-hidden max-h-[calc(100vh-8rem)] md:max-h-[90vh]">
+        <OptimizedVideoPlayer
+          postId={selectedPost.id}
+          video={{
+            id: primaryVideo.id,
+            url: normalizedPrimary,
+            originalUrl: normalizedOriginal,
+            processedUrl: normalizedProcessed,
+            thumbnailUrl: normalizedThumbnail,
+            status: primaryVideo.status || 'READY',
+            qualityUrls: primaryVideo.qualityUrls
+              ? {
+                  '144p': primaryVideo.qualityUrls['144p'] ? normalizeVideoUrl(primaryVideo.qualityUrls['144p']) : undefined,
+                  '240p': primaryVideo.qualityUrls['240p'] ? normalizeVideoUrl(primaryVideo.qualityUrls['240p']) : undefined,
+                  '360p': primaryVideo.qualityUrls['360p'] ? normalizeVideoUrl(primaryVideo.qualityUrls['360p']) : undefined,
+                  '480p': primaryVideo.qualityUrls['480p'] ? normalizeVideoUrl(primaryVideo.qualityUrls['480p']) : undefined,
+                  '720p': primaryVideo.qualityUrls['720p'] ? normalizeVideoUrl(primaryVideo.qualityUrls['720p']) : undefined,
+                }
+              : null,
+          }}
+          initialTime={initialTime}
+          autoResume={autoResume}
+          eager
+          fit={videoFitMode}
+          className={`w-full ${aspectClass} max-h-[calc(100vh-8rem)] md:max-h-[90vh]`}
         />
-        
-        {/* Center Play/Pause Button */}
-        <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
-          <button 
-            onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-            className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-all hover:scale-110"
-          >
-            {isPlaying ? (
-              <Pause className="w-10 h-10 text-white" fill="white" />
-            ) : (
-              <Play className="w-10 h-10 text-white ml-1" fill="white" />
-            )}
-          </button>
-        </div>
-
-        {/* Bottom Controls */}
-        <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-4 pt-12 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          {/* Progress Bar */}
-          <div className="flex items-center gap-3 mb-3">
-            <input
-              type="range"
-              min={0}
-              max={videoDuration || 100}
-              value={videoProgress}
-              onChange={handleSeek}
-              onClick={(e) => e.stopPropagation()}
-              className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg"
-            />
-          </div>
-          
-          {/* Control Buttons */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-                className="text-white hover:text-white/80 transition-colors"
-              >
-                {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-              </button>
-              <button 
-                onClick={toggleMute}
-                className="text-white hover:text-white/80 transition-colors"
-              >
-                {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
-              </button>
-              <span className="text-white text-sm font-medium">
-                {formatTime(videoProgress)} / {formatTime(videoDuration)}
-              </span>
-            </div>
-            <button 
-              onClick={toggleFullscreen}
-              className="text-white hover:text-white/80 transition-colors"
-            >
-              <Maximize className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
       </div>
     );
   }

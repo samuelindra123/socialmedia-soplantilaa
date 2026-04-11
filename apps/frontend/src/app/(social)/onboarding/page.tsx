@@ -1,21 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
-import { 
-  Camera, 
-  ArrowRight, 
-  Loader2, 
-  Check, 
-  User, 
-  AtSign, 
-  AlignLeft,
+import {
+  Camera,
+  ArrowRight,
+  Loader2,
+  Check,
+  User,
+  AtSign,
   Calendar,
-  MapPin
+  MapPin,
+  Sparkles,
+  XCircle
 } from "lucide-react";
 import { uploadFile, apiClient } from "@/lib/api/client";
 import useAuthStore from "@/store/auth";
+
+type UsernameStatus = "idle" | "checking" | "available" | "taken";
+
+const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+
+const useDebounce = <T,>(value: T, delay = 400) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedValue(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
+function getUsernameError(username: string) {
+  const trimmedUsername = username.trim();
+
+  if (!trimmedUsername) {
+    return "Username wajib diisi";
+  }
+
+  if (trimmedUsername.length < 3) {
+    return "Username minimal 3 karakter";
+  }
+
+  if (trimmedUsername.length > 20) {
+    return "Username maksimal 20 karakter";
+  }
+
+  if (!USERNAME_REGEX.test(trimmedUsername)) {
+    return "Username hanya boleh huruf, angka, dan underscore";
+  }
+
+  return "";
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -30,13 +68,23 @@ export default function OnboardingPage() {
   const [tanggalLahir, setTanggalLahir] = useState("");
   const [tempatKelahiran, setTempatKelahiran] = useState("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
+  const [usernameStatusMessage, setUsernameStatusMessage] = useState("");
+  const debouncedUsername = useDebounce(username);
+  const isUsernameDirty = username.trim().length > 0;
+  const debouncedUsernameError = getUsernameError(debouncedUsername);
 
   // Validation Helper
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!username.trim()) {
-      newErrors.username = "Username wajib diisi";
+    const currentUsernameError = getUsernameError(username);
+    if (currentUsernameError) {
+      newErrors.username = currentUsernameError;
+    } else if (usernameStatus === "taken") {
+      newErrors.username = usernameStatusMessage || "Username sudah digunakan";
+    } else if (usernameStatus === "checking") {
+      newErrors.username = "Sedang mengecek username...";
     }
 
     if (!tempatKelahiran.trim()) {
@@ -67,6 +115,72 @@ export default function OnboardingPage() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  useEffect(() => {
+    if (!debouncedUsername.trim()) {
+      setUsernameStatus("idle");
+      setUsernameStatusMessage("");
+      return;
+    }
+
+    if (debouncedUsernameError) {
+      setUsernameStatus("idle");
+      setUsernameStatusMessage("");
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkUsername = async () => {
+      setUsernameStatus("checking");
+      setUsernameStatusMessage("Sedang mengecek username...");
+
+      try {
+        const response = await apiClient.get(`/users/check-username/${encodeURIComponent(debouncedUsername)}`);
+
+        if (cancelled) {
+          return;
+        }
+
+        setUsernameStatus(response.data.available ? "available" : "taken");
+        setUsernameStatusMessage(response.data.message);
+        setErrors((prev) => ({
+          ...prev,
+          username: response.data.available || prev.username === "Gagal mengecek username. Coba lagi."
+            ? ""
+            : response.data.message,
+        }));
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        setUsernameStatus("taken");
+        setUsernameStatusMessage("Gagal mengecek username. Coba lagi.");
+        setErrors((prev) => ({
+          ...prev,
+          username: "Gagal mengecek username. Coba lagi.",
+        }));
+      }
+    };
+
+    void checkUsername();
+
+    setErrors((prev) => {
+      if (!prev.username || prev.username === "Sedang mengecek username..." || prev.username === "Username sudah digunakan") {
+        return {
+          ...prev,
+          username: "",
+        };
+      }
+
+      return prev;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedUsername, debouncedUsernameError]);
 
   // --- STEP 1: UPLOAD PHOTO ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,9 +233,18 @@ export default function OnboardingPage() {
   // --- STEP 2: COMPLETE PROFILE ---
   const handleComplete = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast.error("Mohon perbaiki error pada form");
+      return;
+    }
+
+    if (usernameStatus !== "available") {
+      setErrors((prev) => ({
+        ...prev,
+        username: usernameStatusMessage || "Username belum tersedia",
+      }));
+      toast.error("Username belum siap digunakan");
       return;
     }
 
@@ -129,7 +252,7 @@ export default function OnboardingPage() {
 
     try {
       await apiClient.post('/onboarding/complete', {
-        username,
+        username: username.trim(),
         tanggalLahir: new Date(tanggalLahir).toISOString(),
         tempatKelahiran
       });
@@ -233,18 +356,59 @@ export default function OnboardingPage() {
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                     <AtSign className="w-4 h-4" />
                   </div>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     required
                     value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                    onChange={(e) => {
+                      const nextUsername = e.target.value.toLowerCase().replace(/\s/g, '');
+                      setUsername(nextUsername);
+                      setErrors((prev) => ({
+                        ...prev,
+                        username: getUsernameError(nextUsername),
+                      }));
+                      setUsernameStatus("idle");
+                      setUsernameStatusMessage("");
+                    }}
                     placeholder="username_unik"
-                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white outline-none transition-all ${
-                      errors.username ? "border-red-300 focus:ring-red-500" : "border-slate-200 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+                    className={`w-full pl-10 pr-11 py-3 bg-slate-50 border rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white outline-none transition-all ${
+                      errors.username || usernameStatus === "taken"
+                        ? "border-red-300 focus:ring-red-500"
+                        : usernameStatus === "available"
+                          ? "border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                          : "border-slate-200 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
                     }`}
                   />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    {usernameStatus === "checking" ? (
+                      <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+                    ) : usernameStatus === "available" ? (
+                      <Sparkles className="w-4 h-4 text-emerald-500" />
+                    ) : usernameStatus === "taken" ? (
+                      <XCircle className="w-4 h-4 text-red-500" />
+                    ) : null}
+                  </div>
                 </div>
-                {errors.username && <p className="text-xs text-red-500 mt-1 ml-1">{errors.username}</p>}
+                {errors.username ? (
+                  <p className="text-xs text-red-500 mt-1 ml-1">{errors.username}</p>
+                ) : usernameStatus !== "idle" ? (
+                  <p className={`text-xs mt-1 ml-1 flex items-center gap-1 ${
+                    usernameStatus === "available"
+                      ? "text-emerald-600"
+                      : usernameStatus === "checking"
+                        ? "text-indigo-600"
+                        : "text-red-500"
+                  }`}>
+                    {usernameStatus === "checking" && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {usernameStatus === "available" && <Sparkles className="w-3 h-3" />}
+                    {usernameStatus === "taken" && <XCircle className="w-3 h-3" />}
+                    <span>{usernameStatusMessage}</span>
+                  </p>
+                ) : isUsernameDirty ? (
+                  <p className="text-xs text-slate-400 mt-1 ml-1">Lanjut mengetik untuk cek ketersediaan username.</p>
+                ) : (
+                  <p className="text-xs text-slate-400 mt-1 ml-1">3-20 karakter, huruf kecil, angka, atau underscore.</p>
+                )}
               </div>
 
               {/* Tempat Kelahiran Input */}
@@ -298,10 +462,10 @@ export default function OnboardingPage() {
               >
                 Kembali
               </button>
-              <button 
+              <button
                 type="submit"
-                disabled={isLoading}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
+                disabled={isLoading || usernameStatus === "checking" || usernameStatus !== "available"}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:shadow-none text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
               >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                   <>

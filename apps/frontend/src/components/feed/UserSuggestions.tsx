@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 import useAuthStore from "@/store/auth";
 import { apiClient } from "@/lib/api/client";
 

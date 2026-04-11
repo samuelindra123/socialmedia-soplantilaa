@@ -40,6 +40,7 @@ export default function SystemStatusIndicator() {
     queryKey: ["system-status"],
     queryFn: fetchSystemStatus,
     enabled: open,
+    retry: false,
     refetchOnWindowFocus: false,
     staleTime: 15_000,
   });

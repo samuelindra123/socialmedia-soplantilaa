@@ -23,33 +23,6 @@ import {
 } from './dto/post-media-upload.dto';
 import { PostImageDerivativeService } from './post-image-derivative.service';
 
-const CDN_URL = (process.env.DO_SPACES_CDN_URL || '').replace(/\/$/, '');
-
-const normalizedEndpoint = (process.env.DO_SPACES_ENDPOINT || '').replace(
-  /\/$/,
-  '',
-);
-const endpointHost = normalizedEndpoint.replace(/^https?:\/\//, '');
-const derivedOriginUrl =
-  process.env.DO_SPACES_BUCKET && endpointHost
-    ? `https://${process.env.DO_SPACES_BUCKET}.${endpointHost}`
-    : '';
-
-const ORIGIN_URL = (
-  process.env.DO_SPACES_ORIGIN_URL || derivedOriginUrl
-).replace(/\/$/, '');
-
-// Helper to convert origin URL to CDN URL for serving
-function toCdnUrl(url: string): string {
-  if (!url) return url;
-
-  if (!ORIGIN_URL || !CDN_URL || ORIGIN_URL === CDN_URL) {
-    return url;
-  }
-
-  return url.replace(ORIGIN_URL, CDN_URL);
-}
-
 @Injectable()
 export class PostsService {
   constructor(
@@ -77,10 +50,10 @@ export class PostsService {
 
     // Extract links from content (supports both single and double quotes, and loose spacing)
     const linkRegex = /href\s*=\s*["']([^"']*)["']/g;
-    const extractedLinks: string[] = [];
+    const extractedLinks: string[] = [...(dto.link || [])];
     let match: RegExpExecArray | null;
     while ((match = linkRegex.exec(dto.content)) !== null) {
-      if (match[1]) extractedLinks.push(match[1]);
+      if (match[1] && !extractedLinks.includes(match[1])) extractedLinks.push(match[1]);
     }
 
     // Normalize tags: can be string or array from multipart/form-data
@@ -130,6 +103,7 @@ export class PostsService {
           title: dto.title,
           type: dto.type || (mediaUrls.length > 0 ? 'media' : 'text'),
           content: dto.content,
+          background: dto.background,
           links: extractedLinks,
           authorId: userId,
           images:
@@ -149,7 +123,12 @@ export class PostsService {
           videos:
             dto.mediaType === 'video'
               ? {
-                  create: mediaUrls.map((url) => ({ url })),
+                  create: mediaUrls.map((url) => ({
+                    url,
+                    originalUrl: url,
+                    processedUrl: url,
+                    status: 'READY',
+                  })),
                 }
               : undefined,
         },
@@ -247,13 +226,11 @@ export class PostsService {
     }
 
     const folder = mediaType === 'video' ? 'videos' : 'posts';
-    const urls = await this.spacesService.getMultiplePresignedUrls(
-      folder,
-      dto.files.map((f) => ({
-        fileName: f.fileName,
-        contentType: f.contentType,
-      })),
-    );
+    const urls = dto.files.map((f) => ({
+      uploadUrl: `/api/proxy/spaces/upload`,
+      fileUrl: '',
+      key: `${folder}/${f.fileName}`,
+    }));
 
     return { urls };
   }
@@ -338,7 +315,7 @@ export class PostsService {
       // Filter by User ID
       whereClause = { authorId: userId };
     } else if (mode === 'following' && dto.currentUserId) {
-      // Filter by Following
+      // Filter by Following — fallback to all posts if not following anyone
       const following = await this.prisma.follow.findMany({
         where: {
           followerId: dto.currentUserId,
@@ -347,7 +324,13 @@ export class PostsService {
         select: { followingId: true },
       });
       const followingIds = following.map((f) => f.followingId);
-      whereClause = { authorId: { in: followingIds } };
+      if (followingIds.length > 0) {
+        // Include own posts too
+        whereClause = {
+          authorId: { in: [...followingIds, dto.currentUserId] },
+        };
+      }
+      // else: empty whereClause = show all posts (discovery mode for new users)
     }
 
     // Search Query
@@ -418,9 +401,14 @@ export class PostsService {
                 id: true,
                 url: true,
                 thumbnail: true,
+                thumbnailUrl: true,
                 duration: true,
                 status: true,
                 qualityUrls: true,
+                originalUrl: true,
+                processedUrl: true,
+                width: true,
+                height: true,
               },
             },
             hashtags: {
@@ -479,9 +467,14 @@ export class PostsService {
             id: true;
             url: true;
             thumbnail: true;
+            thumbnailUrl: true;
             duration: true;
             status: true;
             qualityUrls: true;
+            originalUrl: true;
+            processedUrl: true;
+            width: true;
+            height: true;
           };
         };
         hashtags: { select: { hashtag: { select: { name: true } } } };
@@ -550,6 +543,7 @@ export class PostsService {
           title: post.title ?? null,
           type: post.type,
           content: post.content,
+          background: post.background ?? null,
           links: post.links,
           authorId: post.authorId,
           createdAt: post.createdAt,
@@ -560,20 +554,28 @@ export class PostsService {
               ? {
                   ...post.author.profile,
                   profileImageUrl: post.author.profile.profileImageUrl
-                    ? toCdnUrl(post.author.profile.profileImageUrl)
+                    ? post.author.profile.profileImageUrl
                     : null,
                 }
               : null,
           },
           images: post.images.map((img) => ({
             ...img,
-            url: toCdnUrl(img.url),
-            thumbnailUrl: img.thumbnailUrl ? toCdnUrl(img.thumbnailUrl) : null,
+            url: img.url,
+            thumbnailUrl: img.thumbnailUrl ? img.thumbnailUrl : null,
           })),
           videos: post.videos.map((vid) => ({
-            ...vid,
-            url: toCdnUrl(vid.url),
-            thumbnail: vid.thumbnail ? toCdnUrl(vid.thumbnail) : null,
+            id: vid.id,
+            url: vid.processedUrl || vid.originalUrl || vid.url,
+            originalUrl: vid.originalUrl || vid.url,
+            processedUrl: vid.processedUrl || vid.url,
+            thumbnail: vid.thumbnail || vid.thumbnailUrl || null,
+            thumbnailUrl: vid.thumbnailUrl || vid.thumbnail || null,
+            duration: vid.duration ?? null,
+            status: vid.status || 'READY',
+            qualityUrls: vid.qualityUrls || null,
+            width: vid.width ?? null,
+            height: vid.height ?? null,
           })),
           _count: post._count,
           isLiked,
@@ -584,6 +586,57 @@ export class PostsService {
       }),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  /**
+   * Create a post linked to an already-uploaded Video record.
+   * The post is created immediately but the PostVideo URL is populated
+   * only after the Video finishes processing (status = READY).
+   * Until then the post has an empty video placeholder so it won't
+   * render in the feed until the video is ready.
+   */
+  async createPostFromVideoId(userId: string, videoId: string, dto: CreatePostDto) {
+    // Verify the video belongs to this user
+    const video = await this.prisma.video.findFirst({
+      where: { id: videoId, userId },
+    });
+    if (!video) {
+      throw new NotFoundException('Video tidak ditemukan');
+    }
+
+    const content = dto.content?.trim() || dto.title?.trim() || '-';
+
+    // Create post — video URL will be empty until processing completes
+    const post = await this.prisma.post.create({
+      data: {
+        title: dto.title,
+        content,
+        type: 'video',
+        authorId: userId,
+        videos: {
+          create: {
+            url: video.processedUrl || '',
+            originalUrl: video.originalUrl || '',
+            processedUrl: video.processedUrl || '',
+            thumbnailUrl: video.thumbnailUrl || '',
+            status: video.status === 'READY' ? 'READY' : 'PROCESSING',
+            duration: video.duration,
+            width: video.width,
+            height: video.height,
+          },
+        },
+      },
+    });
+
+    // If video is already ready, emit new-post event immediately
+    if (video.status === 'READY') {
+      const fullPost = await this.getPostById(post.id);
+      this.eventsGateway.emitNewPost(fullPost);
+      return fullPost;
+    }
+
+    // Otherwise return post — feed will show it once video is ready
+    return this.getPostById(post.id);
   }
 
   async getPostById(postId: string) {
@@ -619,6 +672,14 @@ export class PostsService {
             id: true,
             url: true,
             thumbnail: true,
+            thumbnailUrl: true,
+            duration: true,
+            status: true,
+            qualityUrls: true,
+            originalUrl: true,
+            processedUrl: true,
+            width: true,
+            height: true,
           },
         },
         hashtags: {
@@ -645,13 +706,21 @@ export class PostsService {
       hashtags: tags,
       images: post.images.map((img) => ({
         ...img,
-        url: toCdnUrl(img.url),
-        thumbnailUrl: img.thumbnailUrl ? toCdnUrl(img.thumbnailUrl) : null,
+        url: img.url,
+        thumbnailUrl: img.thumbnailUrl ? img.thumbnailUrl : null,
       })),
       videos: post.videos.map((vid) => ({
-        ...vid,
-        url: toCdnUrl(vid.url),
-        thumbnail: vid.thumbnail ? toCdnUrl(vid.thumbnail) : null,
+        id: vid.id,
+        url: vid.processedUrl || vid.originalUrl || vid.url,
+        originalUrl: vid.originalUrl || vid.url,
+        processedUrl: vid.processedUrl || vid.url,
+        thumbnail: vid.thumbnail || vid.thumbnailUrl || null,
+        thumbnailUrl: vid.thumbnailUrl || vid.thumbnail || null,
+        duration: vid.duration ?? null,
+        status: vid.status || 'READY',
+        qualityUrls: vid.qualityUrls || null,
+        width: vid.width ?? null,
+        height: vid.height ?? null,
       })),
       author: {
         ...post.author,
@@ -659,7 +728,7 @@ export class PostsService {
           ? {
               ...post.author.profile,
               profileImageUrl: post.author.profile.profileImageUrl
-                ? toCdnUrl(post.author.profile.profileImageUrl)
+                ? post.author.profile.profileImageUrl
                 : null,
             }
           : null,
@@ -720,12 +789,14 @@ export class PostsService {
     const updatedPost = await this.prisma.$transaction(async (tx) => {
       // Extract links if content is updated
       let extractedLinks: string[] | undefined;
-      if (dto.content) {
+      if (dto.content || dto.link) {
         const linkRegex = /href\s*=\s*["']([^"']*)["']/g;
-        extractedLinks = [];
-        let match: RegExpExecArray | null;
-        while ((match = linkRegex.exec(dto.content)) !== null) {
-          if (match[1]) extractedLinks.push(match[1]);
+        extractedLinks = [...(dto.link || [])];
+        if (dto.content) {
+          let match: RegExpExecArray | null;
+          while ((match = linkRegex.exec(dto.content)) !== null) {
+            if (match[1] && !extractedLinks.includes(match[1])) extractedLinks.push(match[1]);
+          }
         }
       }
 
@@ -838,6 +909,9 @@ export class PostsService {
     await this.prisma.post.delete({
       where: { id: postId },
     });
+
+    // Realtime: notify all feed clients
+    this.eventsGateway.emitPostDeleted(postId);
 
     return { message: 'Post berhasil dihapus' };
   }

@@ -11,7 +11,7 @@ function ForgotPasswordOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState<string | null>(null);
-  const [otpValues, setOtpValues] = useState<string[]>(Array(6).fill(""));
+  const [otpValues, setOtpValues] = useState<string[]>(Array(8).fill(""));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(60);
@@ -36,7 +36,7 @@ function ForgotPasswordOtpContent() {
 
   useEffect(() => {
     const otp = otpValues.join("");
-    if (otp.length === 6 && !isSubmitting) {
+    if (otp.length === 8 && !isSubmitting) {
       handleSubmit(new Event('submit') as any);
     }
   }, [otpValues]);
@@ -44,7 +44,7 @@ function ForgotPasswordOtpContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     if (e) e.preventDefault();
     const otp = otpValues.join("");
-    if (otp.length !== 6 || !email) return;
+    if (otp.length !== 8 || !email) return;
 
     setIsSubmitting(true);
     try {
@@ -57,7 +57,7 @@ function ForgotPasswordOtpContent() {
       router.push("/forgot-password/new-password");
     } catch (err) {
       toast.error((err instanceof Error ? err.message : "OTP salah"));
-      setOtpValues(Array(6).fill(""));
+      setOtpValues(Array(8).fill(""));
       inputsRef.current[0]?.focus();
     } finally {
       setIsSubmitting(false);
@@ -80,11 +80,11 @@ function ForgotPasswordOtpContent() {
   };
 
   const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
+    if (!/^[A-Z0-9]*$/i.test(value)) return;
     const newValues = [...otpValues];
-    newValues[index] = value.slice(-1);
+    newValues[index] = value.slice(-1).toUpperCase();
     setOtpValues(newValues);
-    if (value && index < 5) {
+    if (value && index < 7) {
       inputsRef.current[index + 1]?.focus();
     }
   };
@@ -93,6 +93,17 @@ function ForgotPasswordOtpContent() {
     if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
       inputsRef.current[index - 1]?.focus();
     }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/[^A-Z0-9]/gi, "").toUpperCase().slice(0, 8);
+    if (!pasted) return;
+    const newValues = Array(8).fill("");
+    pasted.split("").forEach((char, i) => { newValues[i] = char; });
+    setOtpValues(newValues);
+    const nextEmpty = pasted.length < 8 ? pasted.length : 7;
+    inputsRef.current[nextEmpty]?.focus();
   };
 
   return (
@@ -111,7 +122,7 @@ function ForgotPasswordOtpContent() {
           </div>
           
           <h1 className="text-5xl font-bold text-slate-900 leading-tight tracking-tight [font-family:var(--font-marketing-display,system-ui)]">Masukkan kode OTP</h1>
-          <p className="text-xl text-slate-600 leading-relaxed">Cek email lo, kami kirim kode 6 digit untuk reset password.</p>
+          <p className="text-xl text-slate-600 leading-relaxed">Cek email lo, kami kirim kode 8 karakter untuk reset password.</p>
 
           <div className="grid grid-cols-2 gap-4 pt-6">
             <div className="flex items-start gap-3">
@@ -138,8 +149,8 @@ function ForgotPasswordOtpContent() {
           </div>
         </div>
 
-        <div className="w-full max-w-[400px] mx-auto lg:mx-0">
-          <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-200/60 p-8 lg:p-10">
+        <div className="w-full max-w-[460px] mx-auto lg:mx-0">
+          <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-200/60 p-8">
             
             <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg">
@@ -151,36 +162,58 @@ function ForgotPasswordOtpContent() {
               <span className="text-2xl font-bold text-slate-900 [font-family:var(--font-marketing-display,system-ui)]">Soplantila</span>
             </div>
 
-            <div className="mb-8">
+            <div className="mb-6">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Verifikasi OTP</h2>
               <p className="text-sm text-slate-500">Kode dikirim ke <span className="font-semibold text-slate-900">{email}</span></p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="flex gap-2 justify-center">
+            {/* Progress dots */}
+            <div className="flex items-center justify-center gap-1.5 mb-5">
+              {otpValues.map((v, i) => (
+                <div
+                  key={i}
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    v ? "w-6 bg-slate-900" : "w-3 bg-slate-200"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* OTP boxes — 8 kotak fluid grid */}
+              <div className="grid grid-cols-8 gap-1.5">
                 {otpValues.map((val, idx) => (
                   <input
                     key={idx}
                     ref={(el) => { inputsRef.current[idx] = el; }}
                     type="text"
-                    inputMode="numeric"
+                    inputMode="text"
                     maxLength={1}
                     value={val}
                     onChange={(e) => handleChange(idx, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(idx, e)}
-                    className="w-12 h-14 text-center text-2xl font-bold bg-slate-50 border-2 border-slate-200 focus:border-slate-900 rounded-xl focus:outline-none focus:bg-white transition-all"
+                    onPaste={handlePaste}
+                    className={`aspect-square w-full text-center text-lg font-bold rounded-xl border-2 focus:outline-none transition-colors duration-150 uppercase
+                      ${val
+                        ? "bg-slate-900 border-slate-900 text-white"
+                        : "bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-900 focus:bg-white"
+                      }`}
                   />
                 ))}
               </div>
 
-              <button 
-                type="submit" 
-                disabled={isSubmitting || otpValues.join("").length !== 6}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base shadow-lg shadow-slate-900/20"
+              <p className="text-center text-xs text-slate-400">
+                {otpValues.filter(Boolean).length}/8 karakter diisi
+              </p>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || otpValues.join("").length !== 8}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base shadow-lg shadow-slate-900/20 active:scale-[0.98]"
               >
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                   <>
-                    Verifikasi
+                    Verifikasi Sekarang
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
@@ -191,10 +224,14 @@ function ForgotPasswordOtpContent() {
                   type="button"
                   onClick={handleResend}
                   disabled={countdown > 0 || isResending}
-                  className="text-sm font-semibold text-slate-900 hover:underline disabled:text-slate-400 disabled:no-underline flex items-center justify-center gap-2 mx-auto"
+                  className="text-sm font-semibold text-slate-900 hover:underline disabled:text-slate-400 disabled:no-underline flex items-center justify-center gap-2 mx-auto transition-colors"
                 >
                   {isResending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                  {countdown > 0 ? `Kirim ulang (${countdown}s)` : 'Kirim ulang kode'}
+                  {countdown > 0 ? (
+                    <span>Kirim ulang dalam <span className="tabular-nums">{countdown}s</span></span>
+                  ) : (
+                    "Kirim ulang kode"
+                  )}
                 </button>
               </div>
             </form>

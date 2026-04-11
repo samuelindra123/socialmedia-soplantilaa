@@ -1,112 +1,101 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useCallback } from "react";
-import { Play, Pause, Volume2, VolumeX } from "lucide-react";
-import { useActiveVideo, useVideoControls } from "@/store/videoPlaybackV2";
+/**
+ * ModalVideoMirror — Zero Loading Video in Modal
+ *
+ * STRATEGI:
+ * Video element TIDAK dipindah. Video tetap di feed (di bawah modal).
+ * Modal hanya menampilkan thumbnail + controls overlay.
+ * State (currentTime, isPlaying) sudah tersinkron via Zustand store.
+ *
+ * Ini menghilangkan semua masalah:
+ * - Tidak ada DOM manipulation → tidak ada blank hitam setelah modal tutup
+ * - Tidak ada video baru → tidak ada loading ulang
+ * - Video di feed tetap berjalan, modal hanya mirror UI-nya
+ */
+
+import { useCallback } from 'react';
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { useActiveVideo, useVideoControls } from '@/store/videoPlaybackV2';
 
 type Props = {
   postId: string;
-  src: string;
+  // Props lama dipertahankan agar tidak perlu ubah PostCard
+  src?: string;
   poster?: string;
   className?: string;
-  fit?: "cover" | "contain";
+  fit?: 'cover' | 'contain';
   onAspectRatio?: (ratio: number) => void;
 };
 
-export default function ModalVideoMirror({ postId, src, poster, className = "", fit = "cover", onAspectRatio }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const { activePostId, isPlaying, isMuted, currentTime, duration, progress, showControls } = useActiveVideo();
+export default function ModalVideoMirror({ className = '', fit = 'cover' }: Props) {
+  const { isPlaying, isMuted, progress, currentTime, duration, showControls, thumbnailUrl } = useActiveVideo();
   const { togglePlayPause, toggleMute, seekPercent, showControlsTemporarily } = useVideoControls();
+  const mediaFitClass = fit === 'contain' ? 'object-contain' : 'object-cover';
 
-  const isTarget = activePostId === postId;
+  const handleProgress = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    seekPercent(((e.clientX - r.left) / r.width) * 100);
+  }, [seekPercent]);
 
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el || !isTarget) return;
+  const fmt = (s: number) => !Number.isFinite(s) || s < 0 ? '0:00'
+    : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-    // Sync play/pause
-    if (isPlaying) {
-      el.muted = true; // mirror selalu silent
-      // play with catch to satisfy autoplay policies
-      el.play().catch(() => {});
-    } else {
-      el.pause();
-    }
-  }, [isPlaying, isTarget]);
-
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el || !isTarget) return;
-    // Small threshold to avoid jitter
-    const diff = Math.abs((el.currentTime || 0) - (currentTime || 0));
-    if (diff > 0.25) {
-      el.currentTime = currentTime || 0;
-    }
-  }, [currentTime, isTarget]);
-
-  useEffect(() => {
-    if (!onAspectRatio) return;
-    const el = videoRef.current;
-    if (!el) return;
-
-    const report = () => {
-      if (el.videoWidth && el.videoHeight && el.videoHeight !== 0) {
-        onAspectRatio(el.videoWidth / el.videoHeight);
-      }
-    };
-
-    el.addEventListener("loadedmetadata", report);
-    report();
-
-    return () => {
-      el.removeEventListener("loadedmetadata", report);
-    };
-  }, [onAspectRatio, src]);
-
-  // Ensure mirror stays muted regardless of global state
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.muted = true;
-  }, [isMuted]);
-
-  const formatTime = useCallback((s: number) => {
-    if (!Number.isFinite(s) || s < 0) return "0:00";
-    const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, "0")}`;
-  }, []);
-
-  const onProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = ((e.clientX - rect.left) / rect.width) * 100; seekPercent(pct);
-  };
-
-  const videoFitClass = fit === "contain"
-    ? "max-h-full max-w-full w-auto h-auto object-contain"
-    : "w-full h-full object-cover";
+  const controlsVisible = !isPlaying || showControls;
 
   return (
-    <div className={`relative bg-slate-900 flex items-center justify-center ${className}`} onMouseMove={showControlsTemporarily}>
-      <video ref={videoRef} src={src} poster={poster} className={videoFitClass} playsInline preload="metadata" muted />
-      <div className="absolute inset-0 flex items-center justify-center cursor-pointer" onClick={() => togglePlayPause()}>
-        {!isPlaying && <div className="w-20 h-20 rounded-full bg-slate-900/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 hover:bg-slate-900/70 transition-all hover:scale-110 shadow-2xl"><Play className="w-8 h-8 text-white fill-white ml-1" /></div>}
-      </div>
-      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-16 pb-4 px-4 transition-opacity ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="w-full h-1 bg-white/30 rounded-full mb-4 cursor-pointer hover:h-2 transition-all" onClick={onProgressClick}>
-          <div className="h-full bg-white rounded-full relative" style={{ width: `${progress}%` }}>
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full" />
+    <div
+      className={`relative bg-transparent overflow-hidden ${className}`}
+      onMouseMove={showControlsTemporarily}
+      onTouchStart={showControlsTemporarily}
+      onClick={() => togglePlayPause()}
+    >
+      {/* Thumbnail sebagai visual — video asli tetap di feed */}
+      {thumbnailUrl && (
+        <img
+          src={thumbnailUrl}
+          alt=""
+          aria-hidden
+          className={`absolute inset-0 w-full h-full ${mediaFitClass} transition-opacity duration-300 ${isPlaying ? 'opacity-0' : 'opacity-100'}`}
+        />
+      )}
+
+      {/* Dark overlay saat playing agar controls terbaca */}
+      {isPlaying && (
+        <div className="absolute inset-0 bg-black/20" />
+      )}
+
+      {/* Play button */}
+      {!isPlaying && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 2 }}>
+          <div className="w-14 h-14 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
+            <Play className="w-6 h-6 text-white fill-white ml-1" />
           </div>
         </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={(e)=>{ e.stopPropagation(); togglePlayPause(); }} className="p-2 hover:bg-white/20 rounded-full">
-              {isPlaying ? <Pause className="w-5 h-5 text-white" /> : <Play className="w-5 h-5 text-white fill-white" />}
-            </button>
-            <button onClick={(e)=>{ e.stopPropagation(); toggleMute(); }} className="p-2 hover:bg-white/20 rounded-full">
-              {isMuted ? <VolumeX className="w-5 h-5 text-white" /> : <Volume2 className="w-5 h-5 text-white" />}
-            </button>
-            <span className="text-xs text-white/90 tabular-nums ml-1">{formatTime(currentTime)} / {formatTime(duration)}</span>
+      )}
+
+      {/* Controls */}
+      <div
+        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pt-10 pb-3 px-3 transition-opacity duration-200 ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={{ zIndex: 3 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-full h-1 bg-white/30 rounded-full mb-2.5 cursor-pointer group/bar hover:h-[5px] transition-all" onClick={handleProgress}>
+          <div className="h-full bg-white rounded-full relative" style={{ width: `${progress}%` }}>
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover/bar:opacity-100 transition-opacity" />
           </div>
-          <div className="bg-slate-900/60 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full">Mirror</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => togglePlayPause()} className="p-1.5 hover:bg-white/20 rounded-full transition-colors">
+            {isPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white fill-white" />}
+          </button>
+          <button onClick={() => toggleMute()} className="p-1.5 hover:bg-white/20 rounded-full transition-colors">
+            {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
+          </button>
+          <span className="text-xs text-white/80 tabular-nums select-none flex-1">
+            {fmt(currentTime)} / {fmt(duration)}
+          </span>
         </div>
       </div>
     </div>

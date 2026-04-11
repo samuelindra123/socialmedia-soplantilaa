@@ -2,66 +2,106 @@
 
 import { useState, useEffect, ReactNode, useCallback, CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { motion } from "framer-motion";
 import { useMutation, useQueryClient, useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import useAuthStore from "@/store/auth";
 import { toast } from "react-hot-toast";
 import { apiClient } from "@/lib/api/client";
 import { formatRelativeTime } from "@/lib/utils";
 import { Post, PaginatedResponse, PostVideo } from "@/types";
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, X, Smile, Tag, Play, Pause, Volume2, VolumeX, Check, Copy } from "lucide-react";
+import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, X, Smile, Tag, Play, Pause, Volume2, VolumeX, Check, Copy, ThumbsUp } from "lucide-react";
+
+// Custom icons — desain sendiri, bukan Lucide/Instagram
+const IconLike = ({ filled, className }: { filled?: boolean; className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <path
+      d="M12 21C12 21 3 15.5 3 9.5C3 7 5 5 7.5 5C9.2 5 10.7 5.9 11.5 7.2C11.7 7.6 12.3 7.6 12.5 7.2C13.3 5.9 14.8 5 16.5 5C19 5 21 7 21 9.5C21 15.5 12 21 12 21Z"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+      fill={filled ? "currentColor" : "none"}
+    />
+  </svg>
+);
+
+const IconComment = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <path
+      d="M12 3C7.03 3 3 6.58 3 11C3 13.1 3.9 15 5.4 16.4L4 21L8.8 19.3C9.8 19.75 10.87 20 12 20C16.97 20 21 16.42 21 12C21 7.58 16.97 4 12 4"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="8.5" cy="11.5" r="1" fill="currentColor" />
+    <circle cx="12" cy="11.5" r="1" fill="currentColor" />
+    <circle cx="15.5" cy="11.5" r="1" fill="currentColor" />
+  </svg>
+);
+
+const IconShare = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <path
+      d="M22 12L15 5V9C8 9.5 5 13 4 18C6.5 14.5 10 12.9 15 13V17L22 12Z"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const IconBookmark = ({ filled, className }: { filled?: boolean; className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <path
+      d="M6 3H18C18.55 3 19 3.45 19 4V21L12 17.5L5 21V4C5 3.45 5.45 3 6 3Z"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+      fill={filled ? "currentColor" : "none"}
+    />
+  </svg>
+);
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 import { useRef } from "react";
-import dynamic from "next/dynamic";
 import clsx from "clsx";
 import { useSocketEvent } from "@/providers/SocketProvider";
-import { FeedVideoPlayer } from "@/components/FeedVideoPlayer";
+import { OptimizedVideoPlayer } from "@/components/OptimizedVideoPlayer";
 import ModalVideoMirror from "@/components/ModalVideoMirror";
 import { useVideoPlaybackStore, useActiveVideo, useVideoControls } from "@/store/videoPlaybackV2";
+import { resolveMediaUrl } from "@/lib/media-url";
 
 /**
  * Normalize video URLs to ensure they have proper protocol
  */
 const normalizeVideoUrl = (url: string | null | undefined): string => {
-  if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
-  if (!trimmed) return '';
-
-  // Already has protocol
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
-  }
-
-  // Has protocol-relative path
-  if (trimmed.startsWith('//')) {
-    return `https:${trimmed}`;
-  }
-
-  // Has domain but missing protocol (e.g., "sgp1.digitaloceanspaces.com/...")
-  if (trimmed.includes('.') && !trimmed.startsWith('/')) {
-    return `https://${trimmed}`;
-  }
-
-  // Relative path - not valid for video
-  return '';
+  return resolveMediaUrl(url);
 };
+
+// Client-only timestamp to avoid SSR/client hydration mismatch
+function ClientTimestamp({ date }: { date: string }) {
+  const [label, setLabel] = useState<string>('');
+  useEffect(() => {
+    setLabel(formatRelativeTime(date));
+    const id = setInterval(() => setLabel(formatRelativeTime(date)), 60_000);
+    return () => clearInterval(id);
+  }, [date]);
+  return <>{label}</>;
+}
 
 const COMMON_EMOJIS = [
   "😀", "😂", "😍", "😎", "🥳", "🤩", "😢", "😡", "🙏", "👏", "🔥", "❤️", "🤔", "👍", "🎉", "🙌"
 ];
 
-const RichTextEditor = dynamic(() => import("@/components/common/RichTextEditor"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full bg-slate-50 border border-slate-200 rounded-xl min-h-[120px] animate-pulse" />
-  ),
-});
+import RichTextEditor from "@/components/common/RichTextEditor";
 
 interface PostCardProps {
   post: Post;
   context?: 'feed' | 'explore' | 'profile';
   currentUsername?: string;
-  prefetchComments?: boolean;
+  priorityMedia?: boolean;
+  onCommentClick?: (post: Post) => void;
 }
 
 type LikeItem = {
@@ -94,18 +134,22 @@ function Modal({ open, onClose, children, contentClassName, keepMounted = false 
   return (
     <div
       className={clsx(
-        "fixed inset-0 z-[60] flex items-center justify-center p-4 transition-opacity duration-200",
-        open ? "bg-slate-900/65 backdrop-blur-sm opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        "fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 transition-all duration-300",
+        open ? "bg-black/60 backdrop-blur-[2px] opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       )}
       onClick={open ? onClose : undefined}
       aria-hidden={!open}
     >
       <div
         className={clsx(
-          "bg-white dark:bg-slate-800 rounded-xl w-full shadow-2xl transition-transform duration-200",
-          open ? "scale-100" : "scale-95",
+          "bg-white dark:bg-slate-800 w-full shadow-2xl transition-all duration-300 ease-out",
+          "rounded-t-2xl sm:rounded-xl",
+          open
+            ? "translate-y-0 scale-100 opacity-100"
+            : "translate-y-8 scale-[0.97] opacity-0",
           contentClassName
         )}
+        style={{ willChange: 'transform, opacity' }}
         onClick={(e) => e.stopPropagation()}
         aria-hidden={!open}
       >
@@ -226,12 +270,8 @@ function FollowButton({ targetUsername, initialIsFollowing }: { targetUsername: 
 
 // Helper function to ensure URL has proper protocol
 function ensureValidUrl(url: string | undefined): string | undefined {
-  if (!url || url.trim() === '') return undefined;
-  // If URL doesn't start with http:// or https://, add https://
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('//')) return `https:${url}`;
-  if (url.includes('.') && !url.startsWith('/')) return `https://${url}`;
-  return undefined;
+  const normalized = resolveMediaUrl(url);
+  return normalized || undefined;
 }
 
 const getFiniteNumber = (value: number | undefined | null): number => {
@@ -246,12 +286,21 @@ const formatVideoTime = (seconds: number): string => {
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
-export default function PostCard({ post, context = 'feed', currentUsername, prefetchComments = false }: PostCardProps) {
+export default function PostCard({
+  post,
+  context = 'feed',
+  currentUsername,
+  priorityMedia = false,
+  onCommentClick,
+}: PostCardProps) {
   const username = post.author.profile?.username || "unknown";
   const avatar = post.author.profile?.profileImageUrl;
 
   // Check what media actually exists in the post
-  const hasVideos = post.videos && post.videos.length > 0 && post.videos[0]?.url;
+  const firstVideo = post.videos?.[0] as (PostVideo & { thumbnail?: string | null }) | undefined;
+  const fallbackVideo = (post as any).video as (PostVideo & { thumbnail?: string | null }) | undefined;
+  const videoSource = firstVideo ?? fallbackVideo;
+  const hasVideos = !!videoSource && !!(videoSource.processedUrl || videoSource.originalUrl || videoSource.url);
   const hasImages = post.images && post.images.length > 0 && post.images[0]?.url;
 
   // Determine what to show: prioritize video over image
@@ -261,29 +310,33 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
 
   let rawPostImage: string | undefined;
   let rawPostImageThumbnail: string | undefined;
-  let videoData: PostVideo | undefined;
+  let videoData: (PostVideo & { thumbnail?: string | null }) | undefined;
 
-  if (storedType === 'video' && hasVideos && post.videos && post.videos[0]) {
+  if (storedType === 'video' && hasVideos && videoSource) {
     // Video post - use instant preview system
-    videoData = post.videos[0];
+    videoData = videoSource;
   } else if (storedType === 'image' && hasImages && post.images && post.images[0]) {
     // Image post - show image only
     rawPostImage = post.images[0].url;
     rawPostImageThumbnail = post.images[0].thumbnailUrl || post.images[0].url;
   } else if (storedType === 'media' || storedType === 'text') {
     // Old format or text with media - show what exists (video takes priority)
-    if (hasVideos && post.videos && post.videos[0]) {
-      videoData = post.videos[0];
+    if (hasVideos && videoSource) {
+      videoData = videoSource;
     } else if (hasImages && post.images && post.images[0]) {
       rawPostImage = post.images[0].url;
       rawPostImageThumbnail = post.images[0].thumbnailUrl || post.images[0].url;
     }
   }
 
+  const videoToRender = videoData ?? videoSource;
+  const videoStatus = (videoToRender?.status || '').toString().toUpperCase();
+  const videoThumbnailUrl = videoToRender?.thumbnailUrl ?? videoToRender?.thumbnail ?? null;
+
   // Ensure URLs have proper protocol
   const postImage = ensureValidUrl(rawPostImage);
   const postImageThumbnail = ensureValidUrl(rawPostImageThumbnail) || postImage;
-  const postVideo = videoData ? ensureValidUrl(videoData.originalUrl || videoData.processedUrl || videoData.url) : undefined;
+  const postVideo = videoToRender ? ensureValidUrl(videoToRender.originalUrl || videoToRender.processedUrl || videoToRender.url) : undefined;
 
   const isOwner = currentUsername && currentUsername === username;
   const hasMedia = !!postVideo || !!postImage;
@@ -331,6 +384,14 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
   const contentToDisplay = updatedContent ?? post.content;
   const titleToDisplay = updatedTitle ?? post.title;
   const tagsToDisplay = updatedTags ?? post.hashtags;
+  
+  // Hide title if it looks like a filename (for video posts)
+  const isFilenameTitle = titleToDisplay && (
+    titleToDisplay.includes('_') && 
+    (titleToDisplay.endsWith('.mp4') || titleToDisplay.endsWith('.mov') || 
+     titleToDisplay.match(/\d{2,}/)) // Contains numbers like timestamps
+  );
+  const shouldShowTitle = titleToDisplay && !isFilenameTitle;
 
   // State for expandable description
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -339,6 +400,11 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
 
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
+
+  useEffect(() => {
+    if (!videoToRender) return;
+    // Status selalu READY — tidak ada polling
+  }, [videoToRender]);
 
   // Like state
   const [isLiked, setIsLiked] = useState(!!post.isLiked);
@@ -610,8 +676,16 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
 
   // Handle opening comment modal with video sync (using Zustand)
   const handleOpenCommentPanel = () => {
+    if (onCommentClick) {
+      onCommentClick(post);
+      return;
+    }
+    // Pause video di PostCard sebelum buka modal
+    if (isThisVideoActive) {
+      useVideoPlaybackStore.getState().pause();
+    }
     prepareCommentPanel();
-    openVideoModal(); // This preserves video state
+    openVideoModal();
     setCommentPanelOpen(true);
   };
 
@@ -756,7 +830,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
       const res = await apiClient.get(`/posts/${post.id}/likes`);
       return (res.data || []) as Array<{ id: string; username?: string; namaLengkap?: string; profileImageUrl?: string }>
     },
-    enabled: !!post.id,
+    enabled: likesOpen && !!post.id,
     staleTime: 30000,
   });
 
@@ -801,7 +875,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
   const safeMediaBoxHeight = Number.isFinite(computedMediaBoxHeight) && computedMediaBoxHeight > 0 ? Math.min(computedMediaBoxHeight, modalHeightLimit) : Math.min(520 / safeMediaAspectRatio, modalHeightLimit);
   const mediaBoxStyle: CSSProperties = { width: `${safeMediaBoxWidth}px`, height: `${safeMediaBoxHeight}px`, maxHeight: `${modalHeightLimit}px` };
 
-  const shouldLoadComments = (prefetchComments || isCommentPanelPrepared || commentPanelOpen) && !hasLoadedComments;
+  const shouldLoadComments = (isCommentPanelPrepared || commentPanelOpen) && !hasLoadedComments;
 
   useEffect(() => {
     if (shouldLoadComments && !isCommentsLoading) {
@@ -1052,11 +1126,23 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
             </Link>
             <div className="text-sm">
               <span className="font-semibold text-slate-900 mr-2">{username}</span>
-              {titleToDisplay && (
+              {shouldShowTitle && (
                 <h3 className="font-bold text-slate-900 mb-2 mt-1 text-base leading-tight line-clamp-2" title={titleToDisplay}>{titleToDisplay}</h3>
               )}
 
-              <div className="text-slate-800 whitespace-pre-wrap break-words leading-relaxed prose prose-sm max-w-none prose-p:my-2 prose-a:text-emerald-600 prose-a:no-underline hover:prose-a:underline" dangerouslySetInnerHTML={{ __html: contentToDisplay }} />
+              {post.background ? (
+                <motion.div
+                  layoutId={`post-content-${post.id}`}
+                  className="rounded-2xl flex items-center justify-center min-h-[400px] px-10 py-12 my-2 text-center"
+                  style={{ background: post.background }}
+                >
+                  <p className="text-white text-2xl font-bold leading-snug break-words whitespace-pre-wrap drop-shadow-sm">
+                    {contentToDisplay.replace(/<[^>]+>/g, '')}
+                  </p>
+                </motion.div>
+              ) : (
+                <div className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed prose prose-sm max-w-none prose-p:my-2 prose-a:text-emerald-600 prose-a:no-underline hover:prose-a:underline" dangerouslySetInnerHTML={{ __html: contentToDisplay }} />
+              )}
 
               <div className="flex flex-col gap-1 mt-2">
                 {post.links && post.links.length > 0 ? (
@@ -1092,17 +1178,17 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-4">
               <button onClick={handleLikeClick} disabled={likeMutation.isPending} className={`hover:opacity-60 transition-all ${likeBurst ? 'scale-110' : 'scale-100'}`}>
-                <Heart className={`w-6 h-6 transition-colors ${isLiked ? "fill-red-500 text-red-500" : "text-slate-900"}`} />
+                <IconLike filled={isLiked} className={`w-6 h-6 transition-colors ${isLiked ? "text-red-500" : "text-slate-900"}`} />
               </button>
               <button className="hover:opacity-60 transition-opacity">
-                <MessageCircle className="w-6 h-6 text-slate-900" />
+                <IconComment className="w-6 h-6 text-slate-900" />
               </button>
               <button className="hover:opacity-60 transition-opacity">
-                <Send className="w-6 h-6 text-slate-900" />
+                <IconShare className="w-6 h-6 text-slate-900" />
               </button>
             </div>
             <button className="hover:opacity-60 transition-opacity">
-              <Bookmark className="w-6 h-6 text-slate-900" />
+              <IconBookmark className="w-6 h-6 text-slate-900" />
             </button>
           </div>
           <div className="mb-2 flex items-center gap-2">
@@ -1131,8 +1217,13 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
   // Standard Feed Card
   return (
     <>
-      <article id={`post-${post.id}`} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl mb-4 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3">
+      <motion.article
+        id={`post-${post.id}`}
+        layoutId={`post-card-${post.id}`}
+        className="bg-white dark:bg-[#242526] border-y border-slate-200 dark:border-[#3E4042] overflow-hidden"
+        style={{ willChange: 'transform' }}
+      >
+        <motion.div layoutId={`post-header-${post.id}`} className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href={`/profile/${username}`}>
               <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden relative ring-1 ring-slate-100 dark:ring-slate-600">
@@ -1150,7 +1241,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                 <Link href={`/profile/${username}`} className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                   @{username}
                 </Link>
-                <span className="text-xs text-slate-500 dark:text-slate-400">• {formatRelativeTime(post.createdAt)}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">• <ClientTimestamp date={post.createdAt} /></span>
               </div>
             </div>
           </div>
@@ -1185,51 +1276,96 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
               </button>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {(postVideo || postImage) && (
-          <div className="relative w-full border-y border-slate-100 flex items-center justify-center overflow-hidden">
-            {postVideo && videoData ? (
-              <FeedVideoPlayer
-                postId={post.id}
-                video={{
-                  id: videoData.id,
-                  url: normalizeVideoUrl(videoData.url),
-                  originalUrl: normalizeVideoUrl(videoData.originalUrl),
-                  processedUrl: normalizeVideoUrl(videoData.processedUrl),
-                  thumbnailUrl: normalizeVideoUrl(videoData.thumbnailUrl),
-                  status: videoData.status || 'READY',
-                  qualityUrls: videoData.qualityUrls ? {
-                    '144p': videoData.qualityUrls['144p'] ? normalizeVideoUrl(videoData.qualityUrls['144p']) : undefined,
-                    '240p': videoData.qualityUrls['240p'] ? normalizeVideoUrl(videoData.qualityUrls['240p']) : undefined,
-                    '360p': videoData.qualityUrls['360p'] ? normalizeVideoUrl(videoData.qualityUrls['360p']) : undefined,
-                    '480p': videoData.qualityUrls['480p'] ? normalizeVideoUrl(videoData.qualityUrls['480p']) : undefined,
-                    '720p': videoData.qualityUrls['720p'] ? normalizeVideoUrl(videoData.qualityUrls['720p']) : undefined,
-                  } : null,
-                }}
-                className="w-full aspect-[4/5] max-h-[600px]"
-              />
+          <div className="relative w-full border-y border-slate-100 dark:border-slate-700 overflow-hidden bg-black">
+            {postVideo && videoToRender ? (
+              (() => {
+                const normalizedOriginal = normalizeVideoUrl(videoToRender.originalUrl || videoToRender.url);
+                const normalizedProcessed = normalizeVideoUrl(videoToRender.processedUrl || videoToRender.url);
+                const normalizedThumbnail = normalizeVideoUrl(videoThumbnailUrl);
+                const normalizedPrimary = normalizedProcessed || normalizedOriginal || normalizeVideoUrl(videoToRender.url);
+
+                // Hitung aspect ratio dari metadata video
+                const w = videoToRender.width;
+                const h = videoToRender.height;
+                // Clamp: min 1:1 (square), max 16:9 landscape, max 9:16 portrait
+                // Feed width ~600px, max height 600px
+                let aspectClass = 'aspect-[9/16]'; // default portrait (TikTok/Reels style)
+                if (w && h) {
+                  const ratio = w / h;
+                  if (ratio >= 1.7) aspectClass = 'aspect-video';        // 16:9 landscape
+                  else if (ratio >= 1.2) aspectClass = 'aspect-[4/3]';   // 4:3
+                  else if (ratio >= 0.9) aspectClass = 'aspect-square';  // 1:1
+                  else if (ratio >= 0.7) aspectClass = 'aspect-[4/5]';   // 4:5 (Instagram portrait)
+                  else aspectClass = 'aspect-[9/16]';                    // 9:16 vertical
+                }
+                const videoFitMode: 'cover' | 'contain' = 'contain';
+
+                return (
+                  <div className="relative w-full">
+                    <OptimizedVideoPlayer
+                      postId={post.id}
+                      video={{
+                        id: videoToRender.id,
+                        url: normalizedPrimary,
+                        originalUrl: normalizedOriginal,
+                        processedUrl: normalizedProcessed,
+                        thumbnailUrl: normalizedThumbnail,
+                        status: videoToRender.status || 'READY',
+                        qualityUrls: videoToRender.qualityUrls ? {
+                          '144p': videoToRender.qualityUrls['144p'] ? normalizeVideoUrl(videoToRender.qualityUrls['144p']) : undefined,
+                          '240p': videoToRender.qualityUrls['240p'] ? normalizeVideoUrl(videoToRender.qualityUrls['240p']) : undefined,
+                          '360p': videoToRender.qualityUrls['360p'] ? normalizeVideoUrl(videoToRender.qualityUrls['360p']) : undefined,
+                          '480p': videoToRender.qualityUrls['480p'] ? normalizeVideoUrl(videoToRender.qualityUrls['480p']) : undefined,
+                          '720p': videoToRender.qualityUrls['720p'] ? normalizeVideoUrl(videoToRender.qualityUrls['720p']) : undefined,
+                        } : null,
+                      }}
+                      initialTime={isThisVideoActive ? videoCurrentTime : 0}
+                      autoResume={isThisVideoActive ? isPlaying : false}
+                      fit={videoFitMode}
+                      eager={priorityMedia}
+                      className={`w-full ${aspectClass} max-h-[600px]`}
+                    />
+                    {videoToRender.duration && (
+                      <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs font-medium px-1.5 py-0.5 rounded pointer-events-none">
+                        {Math.floor(videoToRender.duration / 60)}:{String(Math.floor(videoToRender.duration % 60)).padStart(2, '0')}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()
             ) : postVideo ? (
-              <FeedVideoPlayer
+              <OptimizedVideoPlayer
                 postId={post.id}
-                video={{
-                  id: 'fallback-video',
-                  url: normalizeVideoUrl(postVideo),
-                }}
-                className="w-full aspect-[4/5] max-h-[600px]"
+                video={{ id: 'fallback-video', url: normalizeVideoUrl(postVideo) }}
+                initialTime={isThisVideoActive ? videoCurrentTime : 0}
+                autoResume={isThisVideoActive ? isPlaying : false}
+                fit="contain"
+                eager={priorityMedia}
+                className="w-full aspect-[9/16] max-h-[600px]"
               />
-            ) : (
-              <div className="relative w-full bg-slate-900">
-                <Image src={postImageThumbnail!} alt="Post content" width={1080} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto object-contain" />
-              </div>
-            )}
+            ) : postImage ? (
+              <motion.div layoutId={`post-media-${post.id}`} className="relative w-full bg-slate-900">
+                <Image
+                  src={postImageThumbnail!}
+                  alt="Post content"
+                  width={1080}
+                  height={1080}
+                  sizes="(max-width: 768px) 100vw, 600px"
+                  priority={priorityMedia}
+                  className="w-full h-auto object-contain max-h-[600px]"
+                />
+              </motion.div>
+            ) : null}
           </div>
         )}
 
         <div className="px-4 py-3 pb-0">
           <div className="mb-2">
             <div className="text-sm text-slate-900 dark:text-white">
-              {titleToDisplay && (
+              {shouldShowTitle && (
                 <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-3 mt-1 leading-tight line-clamp-2" title={titleToDisplay}>
                   {titleToDisplay}
                 </h3>
@@ -1237,7 +1373,18 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
 
               {/* Truncatable Description */}
               {contentToDisplay && (
-                <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed">
+                post.background ? (
+                  <motion.div
+                    layoutId={`post-content-${post.id}`}
+                    className="rounded-2xl flex items-center justify-center min-h-[400px] px-10 py-12 my-2 text-center"
+                    style={{ background: post.background }}
+                  >
+                    <p className="text-white text-2xl font-bold leading-snug break-words whitespace-pre-wrap drop-shadow-sm">
+                      {contentToDisplay.replace(/<[^>]+>/g, '')}
+                    </p>
+                  </motion.div>
+                ) : (
+                <motion.div layoutId={`post-text-${post.id}`} className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed">
                   {!isDescriptionExpanded && shouldTruncate ? (
                     <>
                       <span
@@ -1259,7 +1406,8 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                       dangerouslySetInnerHTML={{ __html: contentToDisplay }}
                     />
                   )}
-                </div>
+                </motion.div>
+                )
               )}
 
               {/* Tags - only show when expanded or no truncation */}
@@ -1286,7 +1434,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                 aria-label={isLiked ? 'Unlike' : 'Like'}
                 className={`relative group transition-transform duration-200 ${likeBurst ? 'scale-125' : 'scale-100'} active:scale-95 disabled:opacity-50`}
               >
-                <Heart className={`w-6 h-6 transition-all duration-200 ${isLiked ? "fill-red-500 text-red-500" : "text-slate-900 dark:text-white"}`} />
+                <IconLike filled={isLiked} className={`w-6 h-6 transition-all duration-200 ${isLiked ? "text-red-500" : "text-slate-900 dark:text-white"}`} />
               </button>
               <button
                 onClick={handleOpenCommentPanel}
@@ -1295,14 +1443,14 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
                 onTouchStart={prepareCommentPanel}
                 className="hover:opacity-60 transition-opacity"
               >
-                <MessageCircle className="w-6 h-6 text-slate-900 dark:text-white" />
+                <IconComment className="w-6 h-6 text-slate-900 dark:text-white" />
               </button>
               <button onClick={() => { setShareOpen(true); setCopied(false); const url = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/post/${post.id}`; setShareUrl(url); }} className="hover:opacity-60 transition-opacity">
-                <Send className="w-6 h-6 text-slate-900 dark:text-white" />
+                <IconShare className="w-6 h-6 text-slate-900 dark:text-white" />
               </button>
             </div>
             <button className="hover:opacity-60 transition-opacity">
-              <Bookmark className="w-6 h-6 text-slate-900 dark:text-white" />
+              <IconBookmark className="w-6 h-6 text-slate-900 dark:text-white" />
             </button>
           </div>
 
@@ -1329,7 +1477,7 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
             </span>
           </div>
         </div>
-      </article>
+      </motion.article>
 
       {/* Edit Modal */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)} contentClassName="max-w-lg flex flex-col max-h-[90vh]">
@@ -1507,317 +1655,255 @@ export default function PostCard({ post, context = 'feed', currentUsername, pref
       <Modal
         open={commentPanelOpen}
         onClose={handleCloseCommentPanel}
-        contentClassName="w-full max-w-[1100px] max-h-[90vh] flex items-stretch bg-white dark:bg-slate-950 mx-auto overflow-hidden rounded-xl"
+        contentClassName="w-full max-w-[680px] max-h-[90vh] flex flex-col bg-white dark:bg-[#242526] mx-auto overflow-hidden rounded-xl"
         keepMounted={isCommentPanelPrepared}
       >
-        {/* Left Panel - Media dengan ukuran proporsional ala Instagram */}
-        <div className="hidden md:flex flex-[2] min-w-0 items-center justify-center bg-slate-900">
-          {hasMedia ? (
-            <div className="relative flex items-center justify-center" style={mediaBoxStyle}>
-              {postImage ? (
-                <Image
-                  src={postImage!}
-                  alt="Post media"
-                  width={1080}
-                  height={1350}
-                  sizes="(max-width: 768px) 100vw, 700px"
-                  className="w-full h-full object-contain"
-                  onLoadingComplete={({ naturalWidth, naturalHeight }) => {
-                    if (naturalWidth && naturalHeight) {
-                      setDetectedMediaAspectRatio(naturalWidth / naturalHeight);
-                    }
-                  }}
-                />
-              ) : (
-                <ModalVideoMirror
-                  postId={post.id}
-                  src={normalizeVideoUrl(videoData?.processedUrl || videoData?.originalUrl || postVideo)}
-                  poster={normalizeVideoUrl(videoData?.thumbnailUrl)}
-                  className="w-full h-full"
-                  fit="contain"
-                  onAspectRatio={(ratio) => {
-                    if (ratio > 0) {
-                      setDetectedMediaAspectRatio(ratio);
-                    }
-                  }}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center text-slate-400 text-sm h-full py-10">Tidak ada media</div>
-          )}
+        {/* Header */}
+        <div className="relative flex items-center justify-center px-4 py-3 border-b border-slate-200 dark:border-[#3E4042] shrink-0">
+          <span className="font-bold text-base text-slate-900 dark:text-white">
+            Postingan {username}
+          </span>
+          <button
+            onClick={handleCloseCommentPanel}
+            className="absolute right-3 p-1.5 rounded-full bg-slate-100 dark:bg-[#3A3B3C] hover:bg-slate-200 dark:hover:bg-[#4E4F50] transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+          </button>
         </div>
 
-        {/* Right Panel - Post Info & Comments */}
-        <div className="w-full md:flex-[1] md:min-w-[360px] md:max-w-[420px] bg-white dark:bg-slate-950 flex flex-col flex-shrink-0 max-h-[90vh]">
-          {/* Header - Author Info */}
-          <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 shrink-0">
-            <Link href={`/profile/${username}`} className="shrink-0">
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 ring-2 ring-pink-100 dark:ring-slate-700">
-                {avatar ? (
-                  <Image src={avatar} alt={username} width={32} height={32} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs font-bold">{username.charAt(0).toUpperCase()}</div>
-                )}
-              </div>
-            </Link>
-            <div className="flex-1 min-w-0">
-              <Link href={`/profile/${username}`} className="font-semibold text-sm text-slate-900 dark:text-white hover:opacity-70">
-                {username}
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Post content */}
+          <div className="px-4 pt-4 pb-2">
+            {/* Author row */}
+            <div className="flex items-center gap-3 mb-3">
+              <Link href={`/profile/${username}`} className="shrink-0">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100">
+                  {avatar ? (
+                    <Image src={avatar} alt={username} width={40} height={40} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-bold">{username.charAt(0).toUpperCase()}</div>
+                  )}
+                </div>
               </Link>
+              <div>
+                <Link href={`/profile/${username}`} className="font-semibold text-sm text-slate-900 dark:text-white hover:underline">{username}</Link>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{formatRelativeTime(post.createdAt)}</p>
+              </div>
             </div>
-            <button className="p-1 hover:opacity-60">
-              <MoreHorizontal className="w-5 h-5 text-slate-900 dark:text-white" />
-            </button>
+
+            {/* Title */}
+            {titleToDisplay && (
+              <h3 className="font-bold text-slate-900 dark:text-white text-base mb-2">{titleToDisplay}</h3>
+            )}
+
+            {/* Text content (no background) */}
+            {contentToDisplay && !post.background && (
+              <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: contentToDisplay }} />
+            )}
           </div>
 
-          {/* Scrollable Content Area - Caption + Comments */}
-          <div className="flex-1 overflow-y-auto">
-            {/* Caption Section - Compact tanpa duplikat avatar */}
-            {(titleToDisplay || contentToDisplay || (tagsToDisplay && tagsToDisplay.length > 0)) && (
-              <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
-                <div className="text-sm text-slate-800 dark:text-slate-200">
-                  {/* Title */}
-                  {titleToDisplay && (
-                    <span className="font-bold text-slate-900 dark:text-white mr-1">{titleToDisplay}</span>
-                  )}
-                  {/* Description - inline */}
-                  {contentToDisplay && (
-                    <span className="whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: contentToDisplay }} />
-                  )}
-                </div>
+          {/* Background text — edge-to-edge */}
+          {contentToDisplay && post.background && (
+            <div className="flex items-center justify-center min-h-[280px] px-8 py-10 text-center" style={{ background: post.background }}>
+              <p className="text-white text-2xl font-bold leading-snug break-words whitespace-pre-wrap drop-shadow-sm">
+                {contentToDisplay.replace(/<[^>]+>/g, '')}
+              </p>
+            </div>
+          )}
 
-                {/* Tags */}
-                {tagsToDisplay && tagsToDisplay.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {tagsToDisplay.map((t) => (
-                      <span key={t} className="text-blue-500 dark:text-blue-400 text-sm hover:opacity-70 cursor-pointer">#{t}</span>
-                    ))}
-                  </div>
-                )}
+          {/* Media — edge-to-edge, no padding, no rounded */}
+          {postImage && (
+            <div className="overflow-hidden">
+              <Image src={postImage} alt="Post media" width={680} height={480} className="w-full object-cover" />
+            </div>
+          )}
+          {videoData && (
+            <div className="overflow-hidden aspect-video bg-black">
+              <ModalVideoMirror
+                postId={post.id}
+                src={normalizeVideoUrl(videoData?.processedUrl || videoData?.originalUrl || postVideo)}
+                poster={normalizeVideoUrl(videoData?.thumbnailUrl)}
+                className="w-full h-full"
+                fit="contain"
+                onAspectRatio={() => {}}
+              />
+            </div>
+          )}
 
-                {/* Time */}
-                <div className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
-                  {formatRelativeTime(post.createdAt)}
-                </div>
+          <div className="px-4 pb-2">
+            {tagsToDisplay && tagsToDisplay.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-3">
+                {tagsToDisplay.map((t) => (
+                  <span key={t} className="text-blue-500 dark:text-blue-400 text-sm hover:opacity-70 cursor-pointer">#{t}</span>
+                ))}
               </div>
             )}
 
-            {/* Comments List */}
-            <div className="p-3 space-y-4">
-              {isCommentsLoading && comments.length === 0 && (
-                <div className="text-center text-slate-400 dark:text-slate-500 text-sm py-6">Memuat komentar…</div>
-              )}
+            {/* Like/Comment counts */}
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-[#3E4042] text-xs text-slate-500 dark:text-slate-400">
+              <span>{post._count?.likes || 0} suka</span>
+              <span>{post._count?.comments || 0} komentar</span>
+            </div>
 
-              {!isCommentsLoading && comments.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-slate-900 dark:text-white font-semibold text-lg mb-1">Belum ada komentar.</p>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">Jadilah yang pertama berkomentar.</p>
-                </div>
-              )}
-
-              {(comments || []).map((c) => {
-                const cUsername = c.user.profile?.username || 'user';
-                const cAvatar = c.user.profile?.profileImageUrl || '';
-                const commentUserId = c.userId || c.user?.id;
-                const isOwnComment = !!(user?.id && commentUserId && user.id === commentUserId);
-                return (
-                  <div key={c.id} className="flex gap-3">
-                    <Link href={`/profile/${cUsername}`} className="shrink-0">
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100">
-                        {cAvatar ? (
-                          <Image src={cAvatar} alt={cUsername} width={32} height={32} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs font-bold">{cUsername.charAt(0).toUpperCase()}</div>
-                        )}
-                      </div>
-                    </Link>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm">
-                        <Link href={`/profile/${cUsername}`} className="font-semibold text-slate-900 dark:text-white hover:opacity-70 mr-1">{cUsername}</Link>
-                        <span className="text-slate-800 dark:text-slate-200">{c.content}</span>
-                      </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                        <span>{formatRelativeTime(c.createdAt || new Date().toISOString())}</span>
-                        <button onClick={() => setReplyFor(replyFor === c.id ? null : c.id)} className="font-semibold hover:text-slate-900 dark:hover:text-white">Balas</button>
-                        <button
-                          onClick={() => {
-                            if (!user) { toast.error('Harus login untuk menyukai komentar'); return; }
-                            if (commentLikeMutation.isPending) return;
-                            const shouldLike = !c.isLiked;
-                            commentLikeMutation.mutate({ commentId: c.id, shouldLike });
-                          }}
-                          className="flex items-center gap-1 font-semibold hover:text-slate-900 dark:hover:text-white"
-                        >
-                          {(c._count?.likes || 0)} suka
-                        </button>
-                        <button
-                          onClick={() => toggleExpandReplies(c.id)}
-                          className="font-semibold text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-                        >
-                          {expandedReplies.has(c.id) ? 'Sembunyikan' : 'Lihat'} {getReplyCount(c.id, c._count?.replies)} {getReplyCount(c.id, c._count?.replies) === 1 ? 'balasan' : 'balasan'}
-                        </button>
-                        {isOwnComment && (
-                          <button
-                            onClick={() => {
-                              if (deleteCommentMutation.isPending) return;
-                              setDeleteCommentId(c.id);
-                            }}
-                            className="text-red-500 hover:text-red-700 font-semibold"
-                          >
-                            Hapus
-                          </button>
-                        )}
-                      </div>
-
-                      {expandedReplies.has(c.id) && (
-                        <div className="mt-3 ml-4 pl-3 border-l-2 border-slate-200 dark:border-slate-700 space-y-3">
-                          {loadingReplies.has(c.id) ? (
-                            <div className="text-center text-slate-400 text-xs py-2">Memuat balasan…</div>
-                          ) : (repliesMap.get(c.id) || []).length === 0 ? (
-                            <div className="text-slate-400 text-xs py-2">Tidak ada balasan</div>
-                          ) : (
-                            (repliesMap.get(c.id) || []).map((reply) => {
-                              const rUsername = reply.user.profile?.username || 'user';
-                              const rAvatar = reply.user.profile?.profileImageUrl || '';
-                              const replyUserId = reply.userId || reply.user?.id;
-                              const isOwnReply = !!(user?.id && replyUserId && user.id === replyUserId);
-                              return (
-                                <div key={reply.id} className="flex gap-2">
-                                  <Link href={`/profile/${rUsername}`} className="shrink-0">
-                                    <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-100">
-                                      {rAvatar ? (
-                                        <Image src={rAvatar} alt={rUsername} width={24} height={24} className="w-full h-full object-cover" />
-                                      ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white text-[10px] font-bold">{rUsername.charAt(0).toUpperCase()}</div>
-                                      )}
-                                    </div>
-                                  </Link>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-xs">
-                                      <Link href={`/profile/${rUsername}`} className="font-semibold text-slate-900 dark:text-white hover:opacity-70 mr-1">{rUsername}</Link>
-                                      <span className="text-slate-800 dark:text-slate-200">{reply.content}</span>
-                                    </div>
-                                    <div className="mt-1 flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
-                                      <span>{formatRelativeTime(reply.createdAt || new Date().toISOString())}</span>
-                                      <button
-                                        onClick={() => {
-                                          if (!user) { toast.error('Harus login'); return; }
-                                          if (commentLikeMutation.isPending) return;
-                                          const shouldLike = !reply.isLiked;
-                                          commentLikeMutation.mutate({ commentId: reply.id, shouldLike });
-                                        }}
-                                        className="flex items-center gap-1 font-semibold hover:text-slate-900 dark:hover:text-white"
-                                      >
-                                        {(reply._count?.likes || 0)} suka
-                                      </button>
-                                      {isOwnReply && (
-                                        <button
-                                          onClick={() => {
-                                            if (deleteCommentMutation.isPending) return;
-                                            setDeleteCommentId(reply.id);
-                                          }}
-                                          className="text-red-500 hover:text-red-700 font-semibold"
-                                        >
-                                          Hapus
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={() => {
-                                      if (!user) { toast.error('Harus login'); return; }
-                                      if (commentLikeMutation.isPending) return;
-                                      commentLikeMutation.mutate({ commentId: reply.id, shouldLike: !reply.isLiked });
-                                    }}
-                                    className="shrink-0 pt-1"
-                                  >
-                                    <Heart className={`w-3 h-3 ${reply.isLiked ? 'fill-red-500 text-red-500' : 'text-slate-400 hover:text-slate-600'}`} />
-                                  </button>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      )}
-
-                      {replyFor === c.id && (
-                        <div className="relative mt-2">
-                          <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder={`Balas @${cUsername}...`} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-3 pr-16 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 dark:text-slate-100 placeholder:text-slate-400 resize-none" rows={1} />
-                          <button onClick={() => sendReply(c.id)} disabled={isCommentSending} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-sm font-semibold hover:text-blue-600 disabled:opacity-50">{isCommentSending ? '...' : 'Kirim'}</button>
-                        </div>
-                      )}
-                    </div>
-                    {/* Like icon di kanan */}
-                    <button
-                      onClick={() => {
-                        if (!user) { toast.error('Harus login'); return; }
-                        if (commentLikeMutation.isPending) return;
-                        commentLikeMutation.mutate({ commentId: c.id, shouldLike: !c.isLiked });
-                      }}
-                      className="shrink-0 pt-1"
-                    >
-                      <Heart className={`w-3 h-3 ${c.isLiked ? 'fill-red-500 text-red-500' : 'text-slate-400 hover:text-slate-600'}`} />
-                    </button>
-                  </div>
-                );
-              })}
+            {/* Action buttons */}
+            <div className="flex items-center gap-1 py-1 border-b border-slate-100 dark:border-[#3E4042]">
+              <button
+                onClick={() => {
+                  if (!user) { toast.error('Harus login'); return; }
+                  likeMutation.mutate(!isLiked);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-colors hover:bg-slate-100 dark:hover:bg-[#3A3B3C] ${isLiked ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'}`}
+              >
+                <ThumbsUp className={`w-4 h-4 ${isLiked ? 'fill-blue-600 dark:fill-blue-400' : ''}`} />
+                Suka
+              </button>
+              <button
+                onClick={() => commentInputRef.current?.focus()}
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#3A3B3C] transition-colors"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Komentar
+              </button>
             </div>
           </div>
 
-          {/* Form Komentar - Fixed di Bottom (Instagram Style) */}
-          <div className="border-t border-slate-200 dark:border-slate-800 p-3 bg-white dark:bg-slate-950 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="relative" ref={emojiPickerRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
-                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-                  aria-label="Buka pemilih emoji"
-                >
-                  <Smile className="w-6 h-6" />
-                </button>
-                {isEmojiPickerOpen && (
-                  <div className="absolute bottom-11 left-0 z-40 w-56 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl">
-                    <div className="grid grid-cols-6 gap-2 p-3 text-2xl">
-                      {COMMON_EMOJIS.map((emoji) => (
-                        <button
-                          type="button"
-                          key={emoji}
-                          onClick={() => handleEmojiSelect(emoji)}
-                          className="transition-transform hover:scale-110"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="px-3 pb-2 text-[10px] text-center uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                      Emoji favorit
-                    </div>
-                  </div>
-                )}
+          {/* Comments list */}
+          <div className="px-4 pb-4 space-y-4 mt-2">
+            {isCommentsLoading && comments.length === 0 && (
+              <div className="text-center text-slate-400 dark:text-slate-500 text-sm py-6">Memuat komentar…</div>
+            )}
+            {!isCommentsLoading && comments.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-slate-900 dark:text-white font-semibold text-base mb-1">Belum ada komentar.</p>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Jadilah yang pertama berkomentar.</p>
               </div>
+            )}
+            {(comments || []).map((c) => {
+              const cUsername = c.user.profile?.username || 'user';
+              const cAvatar = c.user.profile?.profileImageUrl || '';
+              const commentUserId = c.userId || c.user?.id;
+              const isOwnComment = !!(user?.id && commentUserId && user.id === commentUserId);
+              return (
+                <div key={c.id} className="flex gap-3">
+                  <Link href={`/profile/${cUsername}`} className="shrink-0">
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100">
+                      {cAvatar ? (
+                        <Image src={cAvatar} alt={cUsername} width={36} height={36} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs font-bold">{cUsername.charAt(0).toUpperCase()}</div>
+                      )}
+                    </div>
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <div className="bg-slate-100 dark:bg-[#3A3B3C] rounded-2xl px-3 py-2 inline-block max-w-full">
+                      <Link href={`/profile/${cUsername}`} className="font-semibold text-sm text-slate-900 dark:text-white hover:underline block">{cUsername}</Link>
+                      <span className="text-sm text-slate-800 dark:text-slate-200">{c.content}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 px-1">
+                      <span>{formatRelativeTime(c.createdAt || new Date().toISOString())}</span>
+                      <button
+                        onClick={() => {
+                          if (!user) { toast.error('Harus login'); return; }
+                          if (commentLikeMutation.isPending) return;
+                          commentLikeMutation.mutate({ commentId: c.id, shouldLike: !c.isLiked });
+                        }}
+                        className={`font-semibold hover:text-slate-900 dark:hover:text-white ${c.isLiked ? 'text-blue-500' : ''}`}
+                      >
+                        Suka {c._count?.likes ? `· ${c._count.likes}` : ''}
+                      </button>
+                      <button onClick={() => setReplyFor(replyFor === c.id ? null : c.id)} className="font-semibold hover:text-slate-900 dark:hover:text-white">Balas</button>
+                      {isOwnComment && (
+                        <button onClick={() => setDeleteCommentId(c.id)} className="text-red-500 hover:text-red-700 font-semibold">Hapus</button>
+                      )}
+                    </div>
+
+                    {/* Replies */}
+                    {(c._count?.replies ?? 0) > 0 && (
+                      <button onClick={() => toggleExpandReplies(c.id)} className="mt-1 px-1 text-xs font-semibold text-blue-500 hover:text-blue-600 dark:text-blue-400">
+                        {expandedReplies.has(c.id) ? '▲ Sembunyikan' : `▼ ${getReplyCount(c.id, c._count?.replies)} balasan`}
+                      </button>
+                    )}
+                    {expandedReplies.has(c.id) && (
+                      <div className="mt-2 ml-2 space-y-3">
+                        {loadingReplies.has(c.id) ? (
+                          <div className="text-xs text-slate-400 py-1">Memuat…</div>
+                        ) : (repliesMap.get(c.id) || []).map((reply) => {
+                          const rUsername = reply.user?.profile?.username || 'user';
+                          const rAvatar = reply.user?.profile?.profileImageUrl || '';
+                          const isOwnReply = !!(user?.id && reply.userId && user.id === reply.userId);
+                          return (
+                            <div key={reply.id} className="flex gap-2">
+                              <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-100 shrink-0">
+                                {rAvatar ? <Image src={rAvatar} alt={rUsername} width={28} height={28} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white text-[10px] font-bold">{rUsername.charAt(0).toUpperCase()}</div>}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="bg-slate-100 dark:bg-[#3A3B3C] rounded-2xl px-3 py-2 inline-block max-w-full">
+                                  <Link href={`/profile/${rUsername}`} className="font-semibold text-xs text-slate-900 dark:text-white hover:underline block">{rUsername}</Link>
+                                  <span className="text-xs text-slate-800 dark:text-slate-200">{reply.content}</span>
+                                </div>
+                                <div className="mt-1 flex gap-3 text-xs text-slate-500 px-1">
+                                  <span>{formatRelativeTime(reply.createdAt || new Date().toISOString())}</span>
+                                  <button onClick={() => { if (!user) return; commentLikeMutation.mutate({ commentId: reply.id, shouldLike: !reply.isLiked }); }} className={`font-semibold ${reply.isLiked ? 'text-blue-500' : ''}`}>Suka {reply._count?.likes ? `· ${reply._count.likes}` : ''}</button>
+                                  {isOwnReply && <button onClick={() => setDeleteCommentId(reply.id)} className="text-red-500 font-semibold">Hapus</button>}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {replyFor === c.id && (
+                      <div className="relative mt-2">
+                        <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder={`Balas @${cUsername}...`} className="w-full bg-slate-100 dark:bg-[#3A3B3C] rounded-2xl pl-3 pr-16 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 dark:text-slate-100 placeholder:text-slate-400 resize-none" rows={1} />
+                        <button onClick={() => sendReply(c.id)} disabled={isCommentSending} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-sm font-semibold hover:text-blue-600 disabled:opacity-50">{isCommentSending ? '...' : 'Kirim'}</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Comment input - fixed bottom */}
+        <div className="border-t border-slate-200 dark:border-[#3E4042] px-4 py-3 bg-white dark:bg-[#242526] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 shrink-0">
+              {user?.profile?.profileImageUrl ? (
+                <img src={user.profile.profileImageUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-indigo-500 text-white text-sm font-bold">{user?.namaLengkap?.charAt(0).toUpperCase() || 'U'}</div>
+              )}
+            </div>
+            <div className="flex-1 flex items-center bg-slate-100 dark:bg-[#3A3B3C] rounded-full px-4 py-2 gap-2">
               <input
                 ref={commentInputRef}
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Tambahkan komentar..."
+                placeholder="Tulis komentar..."
                 className="flex-1 bg-transparent text-sm outline-none dark:text-slate-100 placeholder:text-slate-400"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendComment();
-                  }
-                }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendComment(); } }}
               />
-              <button
-                onClick={sendComment}
-                disabled={isCommentSending || !commentText.trim()}
-                className="text-blue-500 text-sm font-semibold hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                {isCommentSending ? 'Mengirim...' : 'Kirim'}
-              </button>
+              <div className="relative" ref={emojiPickerRef}>
+                <button type="button" onClick={() => setIsEmojiPickerOpen((prev) => !prev)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <Smile className="w-5 h-5" />
+                </button>
+                {isEmojiPickerOpen && (
+                  <div className="absolute bottom-9 right-0 z-40 w-56 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl">
+                    <div className="grid grid-cols-6 gap-2 p-3 text-2xl">
+                      {COMMON_EMOJIS.map((emoji) => (
+                        <button type="button" key={emoji} onClick={() => handleEmojiSelect(emoji)} className="transition-transform hover:scale-110">{emoji}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+            <button onClick={sendComment} disabled={isCommentSending || !commentText.trim()} className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              <Send className="w-4 h-4 text-white" />
+            </button>
           </div>
         </div>
       </Modal>

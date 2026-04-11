@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 import { Notification } from "@/types";
 import { formatRelativeTime } from "@/lib/date/relative-time";
 import { MessageSquare, Loader2 } from "lucide-react";

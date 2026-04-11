@@ -43,9 +43,13 @@ export default function SocialShell({
         className
       )}
     >
-      <div className="flex min-h-screen w-full">
+      {/* Desktop top navbar */}
+
+      <div className="flex min-h-screen w-full md:pt-14">
+        {/* Desktop left sidebar */}
         <Sidebar onUploadClick={openComposer} />
         <div className="flex-1 min-w-0 flex flex-col">
+          {/* Mobile header */}
           {!hideMobileHeader && (
             <SocialHeader
               title={mobileTitle}

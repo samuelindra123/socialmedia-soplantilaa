@@ -12,6 +12,13 @@
     "build:backend": "npm run build --prefix apps/backend && npm run prune:backend",
     "build:frontend": "npm run build --prefix apps/frontend",
     "prune:backend": "npm prune --omit=dev --prefix apps/backend",
-    "start": "npm run start:prod --prefix apps/backend"
+    "start": "npm run start:prod --prefix apps/backend",
+    "prisma:studio": "npm run --prefix apps/backend prisma:studio",
+    "prisma:migrate": "npm run --prefix apps/backend prisma:migrate",
+    "prisma:generate": "npm run --prefix apps/backend prisma:generate"
+  },
+  "dependencies": {
+    "@nestjs/platform-socket.io": "^11.1.18",
+    "@nestjs/websockets": "^11.1.18"
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 import { FollowRequest } from "@/types";
 import { formatRelativeTime } from "@/lib/date/relative-time";
 import { Check, X, UserRound, Loader2 } from "lucide-react";

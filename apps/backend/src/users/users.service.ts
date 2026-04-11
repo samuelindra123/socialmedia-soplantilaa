@@ -115,6 +115,42 @@ export class UsersService {
     }));
   }
 
+  async checkUsernameAvailability(userId: string, username: string) {
+    const normalizedUsername = username.trim().toLowerCase();
+
+    if (normalizedUsername.length < 3) {
+      return {
+        available: false,
+        message: 'Username minimal 3 karakter',
+      };
+    }
+
+    if (normalizedUsername.length > 20) {
+      return {
+        available: false,
+        message: 'Username maksimal 20 karakter',
+      };
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(normalizedUsername)) {
+      return {
+        available: false,
+        message: 'Username hanya boleh huruf, angka, dan underscore',
+      };
+    }
+
+    const existingProfile = await this.prisma.profile.findUnique({
+      where: { username: normalizedUsername },
+    });
+
+    return {
+      available: !existingProfile || existingProfile.userId === userId,
+      message: !existingProfile || existingProfile.userId === userId
+        ? 'Username tersedia'
+        : 'Username sudah digunakan',
+    };
+  }
+
   async getUserByUsername(username: string, requesterId?: string) {
     const profile = await this.prisma.profile.findUnique({
       where: { username },
@@ -359,6 +395,14 @@ export class UsersService {
       success: true,
       backgroundProfileUrl: updatedProfile.backgroundProfileUrl,
     };
+  }
+
+  async updateBackgroundUrl(userId: string, url: string) {
+    const updated = await this.prisma.profile.update({
+      where: { userId },
+      data: { backgroundProfileUrl: url },
+    });
+    return { success: true, backgroundProfileUrl: updated.backgroundProfileUrl };
   }
 
   private calculateAge(birthDate: Date): number {

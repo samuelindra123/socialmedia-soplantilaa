@@ -2,6 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && (
+    error.name === 'AbortError' ||
+    error.message.includes('aborted') ||
+    error.message.includes('ECONNRESET')
+  );
+}
+
 interface MaintenanceContextType {
   isServerDown: boolean;
 }
@@ -25,7 +33,11 @@ export function MaintenanceProvider({ children }: { children: ReactNode }) {
         const down = !res.ok;
         setIsServerDown(down);
         document.documentElement.style.setProperty('--banner-height', down ? '36px' : '0px');
-      } catch {
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+
         setIsServerDown(true);
         document.documentElement.style.setProperty('--banner-height', '36px');
       }

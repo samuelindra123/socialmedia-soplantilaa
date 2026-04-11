@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 import { ArrowLeft, Search, Loader2, Check } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";

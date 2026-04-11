@@ -45,7 +45,12 @@ type NotificationsServer = Server<
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      'http://localhost:3000',
+      'https://www.soplantila.my.id',
+      'https://soplantila.my.id',
+    ],
     credentials: true,
   },
   namespace: '/notifications',

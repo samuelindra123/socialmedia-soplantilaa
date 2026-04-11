@@ -9,9 +9,12 @@ Semua dokumentasi teknis dan panduan pengembangan platform Soplantila.
 ```
 docs/
 ├── auth/          # Autentikasi, redesign halaman, bug fixes
-├── email/         # Sistem email, template, panduan integrasi
-├── video/         # Arsitektur video processing, upload, preview
+├── video/         # Arsitektur video, upload, processing, dan optimisasi
+├── redis/         # Optimisasi Redis dan kesiapan production
+├── performance/   # Catatan optimisasi performa dan skala
+├── architecture/  # Catatan perbandingan arsitektur/stabilitas
 ├── security/      # Audit keamanan, laporan
+├── email/         # Sistem email, template, panduan integrasi
 └── deployment/    # Panduan deploy, konfigurasi production
 ```
 
@@ -46,7 +49,19 @@ docs/
 
 | File | Deskripsi |
 |------|-----------|
+| `BACKEND_VIDEO_FIX.md` | Fix terkait backend untuk alur video |
 | `CHUNK_BASED_VIDEO_ARCHITECTURE.md` | Arsitektur upload video berbasis chunk |
+| `FINAL_SUMMARY_VIDEO_UPLOAD.md` | Ringkasan final implementasi upload video |
+| `SCALING_40K_VIDEOS.md` | Catatan scaling untuk beban video besar |
+| `VIDEO_FASTSTART_SUMMARY.md` | Ringkasan implementasi faststart |
+| `VIDEO_FIX_SUMMARY.md` | Ringkasan perbaikan fitur video |
+| `VIDEO_MERGE_OPTIMIZATION.md` | Optimisasi proses merge video |
+| `VIDEO_OPTIMIZATION.md` | Panduan optimisasi video player |
+| `VIDEO_PROCESSING_IMPLEMENTATION.md` | Implementasi teknis video processing |
+| `VIDEO_PROCESSING_SETUP.md` | Panduan setup video processing |
+| `VIDEO_UPLOAD_FACEBOOK_FLOW.md` | Dokumentasi alur upload ala Facebook |
+| `VIDEO_UPLOAD_FIX.md` | Fix issue pada upload video |
+| `VIDEO_UPLOAD_SETUP.md` | Quick start setup upload video |
 | `MULTI_QUALITY_VIDEO_ARCHITECTURE.md` | Arsitektur multi-quality video (144p–1080p) |
 | `VIDEO_PROCESSING_SUMMARY.md` | Ringkasan pipeline video processing |
 | `INSTANT_VIDEO_PREVIEW_ARCHITECTURE.md` | Arsitektur instant preview video |
@@ -71,6 +86,32 @@ docs/
 |------|-----------|
 | `DEPLOYMENT.md` | Panduan deploy production (NestJS + Next.js + PostgreSQL) |
 | `CONVERT_LOGO_TO_PNG.md` | Panduan konversi logo ke PNG |
+| `SSH_KEEPALIVE_FIX.md` | Catatan fix kestabilan koneksi SSH |
+
+---
+
+## 🧠 Architecture (`docs/architecture/`)
+
+| File | Deskripsi |
+|------|-----------|
+| `STABLE_VS_UNSTABLE.md` | Perbandingan pendekatan stabil vs tidak stabil |
+
+---
+
+## ⚡ Performance (`docs/performance/`)
+
+| File | Deskripsi |
+|------|-----------|
+| `OPTIMIZED_500_USERS.md` | Catatan optimisasi untuk skenario 500 user |
+
+---
+
+## 🧰 Redis (`docs/redis/`)
+
+| File | Deskripsi |
+|------|-----------|
+| `REDIS_OPTIMIZATION.md` | Strategi optimisasi Redis |
+| `REDIS_PRODUCTION_READY.md` | Checklist Redis production-ready |
 
 ---
 

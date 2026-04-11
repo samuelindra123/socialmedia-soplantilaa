@@ -5,6 +5,7 @@ import { io, Socket } from 'socket.io-client';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useUploadTaskStore } from '@/store/uploadTasks';
+import { resolveSocketBaseUrl } from '@/lib/socket-url';
 
 type UploadSocketPayload = {
   taskId: string;
@@ -73,62 +74,78 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const pathname = usePathname();
   const { user } = useAuthStore();
-  const applyUploadStatus = useUploadTaskStore((state) => state.applyServerStatus);
+  const applyUploadStatus = useUploadTaskStore((state) => state.dismissTask);
+  void applyUploadStatus; // unused — kept for socket event compatibility
   const socketEnabled = !isPublicRoute(pathname);
 
   useEffect(() => {
     if (!socketEnabled) {
-      setIsConnected(false);
-      setSocket((prevSocket) => {
-        if (prevSocket) {
-          prevSocket.emit('leave-feed');
-          prevSocket.disconnect();
-        }
-        return null;
-      });
       return;
     }
 
-    const raw = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    const baseUrl =
-      typeof window !== 'undefined' && window.location.protocol === 'https:'
-        ? raw.replace(/^http:\/\//, 'https://')
-        : raw;
+    const socketUrl = resolveSocketBaseUrl(process.env.NEXT_PUBLIC_API_URL);
+    let socketInstance: ReturnType<typeof io> | null = null;
 
-    const socketUrl = baseUrl.replace('/api', '');
-
-    const socketInstance = io(socketUrl, {
+    // Small delay to avoid connect/disconnect race on fast navigation
+    const connectTimer = setTimeout(() => {
+    socketInstance = io(socketUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      reconnectionAttempts: 5,
     });
 
+    let lastErrorLogAt = 0;
+    let lastErrorMessage = '';
+
     socketInstance.on('connect', () => {
-      console.log('[Socket] Connected:', socketInstance.id);
+      setSocket(socketInstance);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Socket] Connected:', socketInstance!.id);
+      }
       setIsConnected(true);
-      
+
       // Join feed room to receive updates
-      socketInstance.emit('join-feed');
-      
+      socketInstance!.emit('join-feed');
+
       // If user is logged in, join their personal room
       if (user?.id) {
-        socketInstance.emit('join', { userId: user.id });
+        socketInstance!.emit('join', { userId: user.id });
       }
     });
 
     socketInstance.on('disconnect', () => {
-      console.log('[Socket] Disconnected');
+      setSocket(null);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Socket] Disconnected');
+      }
       setIsConnected(false);
     });
 
     socketInstance.on('connect_error', (error) => {
-      console.log('[Socket] Connection error:', error.message);
+      const now = Date.now();
+      const sameMessage = error.message === lastErrorMessage;
+      const withinThrottleWindow = now - lastErrorLogAt < 10000;
+      if (!sameMessage || !withinThrottleWindow) {
+        console.warn('[Socket] Connection error:', error.message);
+        lastErrorLogAt = now;
+        lastErrorMessage = error.message;
+      }
     });
 
-    setSocket(socketInstance);
+    socketInstance.on('reconnect_failed', () => {
+      console.warn('[Socket] Failed to reconnect after max attempts');
+    });
+    }, 300); // delay to avoid race on fast navigation
 
     return () => {
-      socketInstance.emit('leave-feed');
-      socketInstance.disconnect();
+      clearTimeout(connectTimer);
+      if (socketInstance) {
+        socketInstance.emit('leave-feed');
+        socketInstance.disconnect();
+      }
     };
   }, [socketEnabled, user?.id]);
 
@@ -140,18 +157,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   }, [socket, isConnected, user?.id]);
 
   useEffect(() => {
-    if (!socket) return;
-
-    const onUploadStatus = (payload: UploadSocketPayload) => {
-      applyUploadStatus(payload);
-    };
-
-    socket.on('upload:status', onUploadStatus);
-
-    return () => {
-      socket.off('upload:status', onUploadStatus);
-    };
-  }, [socket, applyUploadStatus]);
+    if (!isConnected || !socket) return;
+    // upload:status socket event removed — no longer needed
+  }, [socket, isConnected]);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>
@@ -172,7 +180,9 @@ export function useSocketEvent<T>(event: string, callback: (data: T) => void) {
     if (!socket) return;
 
     const handler = (data: T) => {
-      console.log(`[Socket] Event '${event}' received:`, data);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Socket] Event '${event}' received:`, data);
+      }
       callback(data);
     };
 

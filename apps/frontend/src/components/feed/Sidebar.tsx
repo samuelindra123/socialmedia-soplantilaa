@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useNotificationStore } from "@/store/notifications";
-import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import {
   Home,
   Search,
@@ -43,10 +42,7 @@ export default function Sidebar({ onUploadClick }: SidebarProps) {
   const setUnreadMessageCount = useNotificationStore((state) => state.setUnreadMessageCount);
   const setFollowRequestCount = useNotificationStore((state) => state.setFollowRequestCount);
   const [mounted, setMounted] = useState(false);
-  
-  // Initialize realtime notifications
-  useRealtimeNotifications();
-  
+
   // Avoid hydration mismatch by only reflecting preference after mount
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 import { Search, PenSquare, MessageCircle, Loader2, ShieldCheck, Users, Mail } from "lucide-react";
 import SocialShell from "@/components/layouts/SocialShell";
 import { apiClient } from "@/lib/api/client";

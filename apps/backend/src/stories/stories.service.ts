@@ -34,10 +34,11 @@ export class StoriesService {
       throw new BadRequestException('Maksimal 10 file per upload');
     }
 
-    const urls = await this.spacesService.getMultiplePresignedUrls(
-      'stories',
-      dto.files,
-    );
+    const urls = dto.files.map((f: { fileName: string; contentType: string }) => ({
+      uploadUrl: `/api/proxy/spaces/upload`,
+      fileUrl: '',
+      key: `stories/${f.fileName}`,
+    }));
 
     return { urls };
   }
@@ -92,8 +93,7 @@ export class StoriesService {
     if (isVideo) {
       try {
         const metadata = await this.thumbnailService.getVideoMetadata(
-          file.buffer,
-          file.originalname,
+          file.buffer as unknown as string,
         );
 
         if (metadata.duration > MAX_STORY_VIDEO_DURATION_SECONDS) {
@@ -126,32 +126,7 @@ export class StoriesService {
       },
     });
 
-    // Generate preview + thumbnail for video in background
-    if (isVideo) {
-      void this.thumbnailService
-        .generateStoryAssets(file.buffer, file.originalname)
-        .then(async (assets) => {
-          // Update story with preview and thumbnail
-          await this.prisma.story
-            .update({
-              where: { id: story.id },
-              data: {
-                previewUrl: assets.previewUrl,
-                thumbnailUrl: assets.thumbnailUrl,
-              },
-            })
-            .catch(() => {});
-
-          if (assets.previewUrl) {
-            console.log(`✅ Story ${story.id} preview ready`);
-          }
-        })
-        .catch((err: unknown) => {
-          const message =
-            err instanceof Error ? err.message : 'Unknown thumbnail error';
-          console.error(`Failed to generate story assets: ${message}`);
-        });
-    }
+    // Thumbnail generation handled by frontend Canvas API — skip here
 
     return story;
   }
@@ -323,8 +298,7 @@ export class StoriesService {
       if (isVideo) {
         try {
           const metadata = await this.thumbnailService.getVideoMetadata(
-            file.buffer,
-            file.originalname,
+            file.buffer as unknown as string,
           );
 
           if (metadata.duration > MAX_STORY_VIDEO_DURATION_SECONDS) {
@@ -356,23 +330,7 @@ export class StoriesService {
         },
       });
 
-      // Generate preview + thumbnail for video in background
-      if (isVideo) {
-        this.thumbnailService
-          .generateStoryAssets(file.buffer, file.originalname)
-          .then(async (assets) => {
-            await this.prisma.story
-              .update({
-                where: { id: story.id },
-                data: {
-                  previewUrl: assets.previewUrl,
-                  thumbnailUrl: assets.thumbnailUrl,
-                },
-              })
-              .catch(() => {});
-          })
-          .catch(() => {});
-      }
+      // Thumbnail generation handled by frontend Canvas API — skip here
 
       stories.push(story);
     }

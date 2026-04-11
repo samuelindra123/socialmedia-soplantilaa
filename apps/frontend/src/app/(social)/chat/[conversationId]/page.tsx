@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 import Link from "next/link";
 import { ArrowLeft, Send, Loader2, Info, X, ImageIcon, FileText, Mic, Video, Paperclip, Play, File, Download, Check, CheckCheck, Trash2, MoreVertical } from "lucide-react";
 import toast from "react-hot-toast";

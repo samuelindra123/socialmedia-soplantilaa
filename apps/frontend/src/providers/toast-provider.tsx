@@ -8,6 +8,9 @@ export default function ToastProvider() {
       position="top-right"
       toastOptions={{
         duration: 3000,
+        loading: {
+          duration: Infinity,
+        },
         style: {
           background: '#1F2937',
           color: '#F9FAFB',

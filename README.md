@@ -18,6 +18,12 @@ Repositori ini berisi:
   - Halaman fitur (`/features`) yang menjelaskan fitur sosial (feed, discover, pesan, komunitas, profil, keamanan, dll).
 - **Mode sosial**
   - Feed refleksi, profil pengguna, notifikasi, pesan, dan navigasi mobile.
+- **Video Player Optimization** ⚡ NEW
+  - High-performance video player menggunakan Plyr
+  - Adaptive quality switching (144p - 720p)
+  - Lazy loading & bandwidth optimization
+  - Smooth playback seperti Facebook/Instagram
+  - [Dokumentasi lengkap](./docs/video/VIDEO_OPTIMIZATION.md)
 - **Autentikasi & OAuth**
   - Flow login/signup dengan tombol Google dan UI yang konsisten.
 - **System status widget**
@@ -127,7 +133,7 @@ Catatan keamanan frontend:
 
 Untuk panduan deployment lengkap (NestJS + Next.js + PostgreSQL + reverse proxy), lihat:
 
-- [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)
+- [`docs/deployment/DEPLOYMENT.md`](./docs/deployment/DEPLOYMENT.md)
 
 Dokumen tersebut menjelaskan:
 

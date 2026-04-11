@@ -10,7 +10,7 @@ import SocialThemeWrapper from "@/components/SocialThemeWrapper";
 import SocialShell from "@/components/layouts/SocialShell";
 import { apiClient } from "@/lib/api/client";
 import { Loader2, Camera, Save, ArrowLeft } from "lucide-react";
-import Image from "next/image";
+import Image from "@/components/ui/SmartImage";
 import { toast } from "react-hot-toast";
 
 // Schema validasi

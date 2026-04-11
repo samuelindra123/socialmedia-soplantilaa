@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
   Body,
   Param,
   Query,
@@ -50,9 +51,27 @@ export class UsersController {
     return this.usersService.updateBackgroundProfile(req.user!.id, file);
   }
 
+  /** Called after browser uploads directly to Appwrite — just saves the URL */
+  @Patch('profile/background-url')
+  updateBackgroundUrl(
+    @Request() req: { user?: { id: string } },
+    @Body('url') url: string,
+  ) {
+    if (!url) throw new BadRequestException('url wajib diisi');
+    return this.usersService.updateBackgroundUrl(req.user!.id, url);
+  }
+
   @Get('search')
   searchUsers(@Query() dto: SearchUsersDto) {
     return this.usersService.searchUsers(dto);
+  }
+
+  @Get('check-username/:username')
+  checkUsernameAvailability(
+    @Param('username') username: string,
+    @Request() req: { user?: { id: string } },
+  ) {
+    return this.usersService.checkUsernameAvailability(req.user!.id, username);
   }
 
   @Get('suggestions')
